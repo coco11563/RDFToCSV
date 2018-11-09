@@ -17,6 +17,6 @@ this program can totally handle the OBJECT part of rdf
 but can't convert the OWL part or semantic part
 
 
-any problem and friendly help, please feel free to contact me 
+any problems you found and any needs of friendly you seek, please feel free to contact me 
 
 coco11563@yeah.net
