@@ -15,3 +15,8 @@ by using the forest, the csv string seq will be build
 this program can totally handle the OBJECT part of rdf
 
 but can't convert the OWL part or semantic part
+
+
+any problem and friendly help, please feel free to contact me 
+
+coco11563@yeah.net
