@@ -21,7 +21,6 @@ import scala.collection.mutable
 class NodeTreeHandler extends RDFHandler with Callable[Int]{
   val NodeMap : mutable.HashMap[IRI, Node] = new mutable.HashMap[IRI, Node]()
   val BNodeMap : mutable.HashMap[BNode, mutable.Set[Node]] = new mutable.HashMap[BNode, mutable.Set[Node]]()
-  val PropNames : ConcurrentHashMap[String, Boolean] = new ConcurrentHashMap[String, Boolean]()
   val relationQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   val unHandleBNodeTail : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   lazy val DEFAULT: ThreadPoolExecutor = createDefaultPool
@@ -42,10 +41,10 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   def handleStatement(subject: Resource, predicate : IRI, obj : Value, statement: Statement) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) =>
       if (NodeMap.contains(a)) NodeMap(a).handle(statement)
-      else NodeMap.put(a, Node.build(statement, PropNames))
+      else NodeMap.put(a, Node.build(statement))
     case (a:U, b:U, c:U) =>
       if (NodeMap.contains(a)) NodeMap(a).handle(statement)
-      else NodeMap.put(a, Node.build(statement, PropNames))
+      else NodeMap.put(a, Node.build(statement))
     case (a:U, b:U, c:B) =>
       val node : Node =
         if (NodeMap.contains(a)) {
@@ -54,7 +53,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
           n
         }
       else {
-        val n = Node.build(statement, PropNames)
+        val n = Node.build(statement)
         NodeMap.put(a, n)
         n
       }

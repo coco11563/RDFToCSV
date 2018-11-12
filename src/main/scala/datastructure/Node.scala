@@ -7,14 +7,14 @@ import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.vocabulary.RDF
 
 import scala.collection.mutable
-class Node(private val id : U, private var label : U, val propSet : ConcurrentHashMap[String, Boolean]) {
+class Node(private val id : U, private var label : U) {
   /**
     * constructor for UUL and UUB or relation type's UUU
     * will build a node without the label
     * @param id you know what id means
     * @return
     */
-  private def this(id : U, propSet : ConcurrentHashMap[String, Boolean]) = this(id, null, propSet)
+  private def this(id : U) = this(id, null, propSet)
 
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
 
@@ -23,6 +23,8 @@ class Node(private val id : U, private var label : U, val propSet : ConcurrentHa
   private val bNodeRelation = new mutable.HashSet[(String, U, U)]()
 
   private val nodeRelation = new mutable.HashSet[(String, U, U)]()
+
+  val propSet : ConcurrentHashMap[String, Boolean] = new ConcurrentHashMap[String, Boolean]()
 
   private def addProp(iri: String, lit : String) : Unit = {
     if (properties.contains(iri)) {
@@ -93,17 +95,17 @@ class Node(private val id : U, private var label : U, val propSet : ConcurrentHa
 
 object Node {
 
-  def build(statement: Statement, map : ConcurrentHashMap[String, Boolean]) : Node = {
-    instance(statement.getSubject, statement.getPredicate, statement.getObject, map)
+  def build(statement: Statement) : Node = {
+    instance(statement.getSubject, statement.getPredicate, statement.getObject)
   }
   // only UUL UUU UUB can create or add new node
-  private def instance(subject: Resource, predicate : IRI, obj : Value, set : ConcurrentHashMap[String, Boolean]) : Node = (subject, predicate, obj) match {
-    case (a:U, b:U, c:L) => val node = new Node(a, set); node.addProp(b.getLocalName, c.stringValue()); node
+  private def instance(subject: Resource, predicate : IRI, obj : Value) : Node = (subject, predicate, obj) match {
+    case (a:U, b:U, c:L) => val node = new Node(a); node.addProp(b.getLocalName, c.stringValue()); node
     case (a:U, b:U, c:U) =>
       if (b.equals(RDF.TYPE)) //type label
-        new Node(a, c, set)
-      else new Node(a, set)
-    case (a:U, b:U, c:B) => val node = new Node(a, set); node.addBNode(c, b.getLocalName); node
+        new Node(a, c)
+      else new Node(a)
+    case (a:U, b:U, c:B) => val node = new Node(a); node.addBNode(c, b.getLocalName); node
     case _ => throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 }
