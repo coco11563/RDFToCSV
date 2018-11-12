@@ -1,9 +1,9 @@
 package datastructure
 
 import java.util.concurrent._
-import datastructure.Util.ThreadUtils._
-import datastructure.Obj.Property
+
 import datastructure.Obj.TypeMap.{B, L, U}
+import datastructure.Util.ThreadUtils._
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.rio.RDFHandler
 
@@ -21,10 +21,11 @@ import scala.collection.mutable
 class NodeTreeHandler extends RDFHandler with Callable[Int]{
   val NodeMap : mutable.HashMap[IRI, Node] = new mutable.HashMap[IRI, Node]()
   val BNodeMap : mutable.HashMap[BNode, mutable.Set[Node]] = new mutable.HashMap[BNode, mutable.Set[Node]]()
-  val PropNames : mutable.HashSet[Property] = new mutable.HashSet[Property]()
+  val PropNames : ConcurrentHashMap[String, Boolean] = new ConcurrentHashMap[String, Boolean]()
   val relationQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   val unHandleBNodeTail : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   lazy val DEFAULT: ThreadPoolExecutor = createDefaultPool
+
   override def handleStatement(statement: Statement) : Unit = {
     handleStatement(statement.getSubject, statement.getPredicate, statement.getObject, statement)
   }
@@ -41,10 +42,10 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   def handleStatement(subject: Resource, predicate : IRI, obj : Value, statement: Statement) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) =>
       if (NodeMap.contains(a)) NodeMap(a).handle(statement)
-      else NodeMap.put(a, Node.build(statement))
+      else NodeMap.put(a, Node.build(statement, PropNames))
     case (a:U, b:U, c:U) =>
       if (NodeMap.contains(a)) NodeMap(a).handle(statement)
-      else NodeMap.put(a, Node.build(statement))
+      else NodeMap.put(a, Node.build(statement, PropNames))
     case (a:U, b:U, c:B) =>
       val node : Node =
         if (NodeMap.contains(a)) {
@@ -53,7 +54,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
           n
         }
       else {
-        val n = Node.build(statement)
+        val n = Node.build(statement, PropNames)
         NodeMap.put(a, n)
         n
       }
@@ -79,7 +80,6 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
 
   override def endRDF(): Unit = {
     val nums = intoFuture[Int](DEFAULT,this)
-    while (!nums.isDone) {}
     println(nums.get())
   }
 
@@ -111,6 +111,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
       val statements : mutable.Seq[Statement] = unHandleBNodeTail.dequeueAll(_ => true) // dequeue all
       statements.foreach(
         statement => {
+//          println(statement.getSubject.stringValue())
           val subject = statement.getSubject
           val obj = statement.getObject
           val predicate = statement.getPredicate
