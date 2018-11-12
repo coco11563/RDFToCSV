@@ -1,8 +1,7 @@
 package datastructure
 
 import java.util.concurrent._
-import java.util.concurrent.locks.LockSupport
-
+import datastructure.Util.ThreadUtils._
 import datastructure.Obj.Property
 import datastructure.Obj.TypeMap.{B, L, U}
 import org.eclipse.rdf4j.model._
@@ -25,7 +24,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   val PropNames : mutable.HashSet[Property] = new mutable.HashSet[Property]()
   val relationQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   val unHandleBNodeTail : mutable.Queue[Statement] = new mutable.Queue[Statement]()
-  lazy val DEFAULT: ThreadPoolExecutor = NodeTreeHandler.createDefaultPool
+  lazy val DEFAULT: ThreadPoolExecutor = createDefaultPool
   override def handleStatement(statement: Statement) : Unit = {
     handleStatement(statement.getSubject, statement.getPredicate, statement.getObject, statement)
   }
@@ -79,7 +78,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   override def startRDF(): Unit = {}
 
   override def endRDF(): Unit = {
-    val nums = NodeTreeHandler.intoFuture[Int](DEFAULT,this)
+    val nums = intoFuture[Int](DEFAULT,this)
     while (!nums.isDone) {}
     println(nums.get())
   }
@@ -137,35 +136,4 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
     }
     count
   }
-}
-
-object NodeTreeHandler {
-  def intoFuture[T](pool: ExecutorService , callable: Callable[T]): Future[T] = {
-      pool.submit(() => {
-        def foo() = try {
-          callable.call
-        }
-        foo()
-      })
-  }
-    def createDefaultPool :ThreadPoolExecutor = {
-      val threads = Runtime.getRuntime.availableProcessors * 2
-      val queueSize = threads * 25
-      new ThreadPoolExecutor(threads / 2, threads, 30L, TimeUnit.SECONDS, new ArrayBlockingQueue[Runnable](queueSize), new CallerBlocksPolicy)
-      //                new ThreadPoolExecutor.CallerRunsPolicy());
-    }
-
-    class CallerBlocksPolicy() extends RejectedExecutionHandler {
-      override def rejectedExecution(r: Runnable, executor: ThreadPoolExecutor): Unit = {
-        if (!executor.isShutdown) { // block caller for 100ns
-          LockSupport.parkNanos(100)
-          try // submit again
-          executor.submit(r).get
-          catch {
-            case e@(_: InterruptedException | _: ExecutionException) =>
-              throw new RuntimeException(e)
-          }
-        }
-      }
-    }
 }
