@@ -6,14 +6,14 @@ import org.eclipse.rdf4j.model.vocabulary.RDF
 
 import scala.collection.mutable
 
-class Node(private val id : U, private var label : U) {
+private class Node(private val id : U, private var label : U) {
   /**
     * constructor for UUL and UUB or relation type's UUU
     * will build a node without the label
     * @param id you know what id means
     * @return
     */
-  def this(id : U) = this(id, null)
+  private def this(id : U) = this(id, null)
 
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
 
@@ -21,7 +21,9 @@ class Node(private val id : U, private var label : U) {
 
   private val bNodeRelation = new mutable.HashSet[(String, U, U)]()
 
-  def addProp(iri: String, lit : String) : Unit = {
+  private val nodeRelation = new mutable.HashSet[(String, U, U)]()
+
+  private def addProp(iri: String, lit : String) : Unit = {
     if (properties.contains(iri)) properties(iri).add(lit)
     else properties.put(iri, mutable.HashSet(lit))
   }
@@ -30,15 +32,16 @@ class Node(private val id : U, private var label : U) {
     * @param bNode inserted bNode
     * @param predicate the bNode statement's predicate
     */
-  def addBNode(bNode: B, predicate: String) : Unit =  if (!bNodePredicate.contains(bNode)) bNodePredicate.put(bNode, predicate)
+  private def addBNode(bNode: B, predicate: String) : Unit =  if (!bNodePredicate.contains(bNode)) bNodePredicate.put(bNode, predicate)
 
   /**
     *
     * @param predicate the relation name
     * @param id point id
     */
-  def addBNodeRelation (predicate : String, id : U): Boolean = bNodeRelation.add((predicate, this.id, id))
+  private def addBNodeRelation (predicate : String, id : U): Boolean = bNodeRelation.add((predicate, this.id, id))
 
+  private def addNodeRelation (predicate : String, id : U) : Boolean = nodeRelation.add((predicate, this.id, id))
   /**
     * bNode adding method for insert bNode which have a bNode precedent(form of BUB)
     * the predicate of this bnode will be APPENDED by their precedent
@@ -46,13 +49,13 @@ class Node(private val id : U, private var label : U) {
     * @param succession succeeding Bnode id
     * @param sucPredicate succeeding Bnode predicate
     */
-  def addSucceedBNodeAppend(precedent : B, succession : B, sucPredicate : String) : Unit = addBNode(succession, bNodePredicate(precedent) + sucPredicate)
+  private def addSucceedBNodeAppend(precedent : B, succession : B, sucPredicate : String) : Unit = addBNode(succession, bNodePredicate(precedent) + sucPredicate)
 
-  def getBNodePredicate(B : B) : String = bNodePredicate(B)
+  private def getBNodePredicate(B : B) : String = bNodePredicate(B)
 
-  def hasLabel : Boolean = label == null
+  private def hasLabel : Boolean = label == null
 
-  def addLabel(label : U) : Unit = if (!hasLabel) this.label = label
+  private def addLabel(label : U) : Unit = if (!hasLabel) this.label = label
 
   def getProp(predicate : String) : mutable.HashSet[String] = {
     if (properties.contains(predicate))
@@ -68,10 +71,10 @@ class Node(private val id : U, private var label : U) {
 
   private def handle(subject: Resource, predicate : IRI, obj : Value) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) => addProp(b.getLocalName, c.stringValue()) // handle literal
-    case (a:U, b:U, c:U) => if (b.equals(RDF.TYPE)) addLabel(c) //handle label
+    case (a:U, b:U, c:U) => if (b.equals(RDF.TYPE)) addLabel(c) else addNodeRelation(b.getLocalName, c)//handle label
     case (a:U, b:U, c:B) => addBNode(c, b.getLocalName) // handle this by adding
     case (a:B, b:U, c:L) => addProp(getBNodePredicate(a) + ":"+ b.getLocalName, c.stringValue()) // attach this
-    case (a:B, b:U, c:U) => addBNodeRelation(getBNodePredicate(a) + ":"+ b.getLocalName, c)
+    case (a:B, b:U, c:U) => if (!b.equals(RDF.TYPE)) addBNodeRelation(getBNodePredicate(a) + ":"+ b.getLocalName, c) // discard the blank node label
     case (a:B, b:U, c:B) => addBNode(c, getBNodePredicate(a) + ":" + b.getLocalName)
     case _ =>
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
