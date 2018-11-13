@@ -1,7 +1,5 @@
 package datastructure
 
-import java.util.concurrent.ConcurrentHashMap
-
 import datastructure.Obj.TypeMap.{B, L, U}
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.vocabulary.RDF
@@ -65,7 +63,7 @@ class Node(private val id : U, private var label : U) {
 
   private def getBNodePredicate(B : B) : String = bNodePredicate(B)
 
-  private def hasLabel : Boolean = label == null
+  private def hasLabel : Boolean = label != null
 
   private def addLabel(label : U) : Unit = if (!hasLabel) this.label = label
 
@@ -79,7 +77,10 @@ class Node(private val id : U, private var label : U) {
     * handle all input statement, with the structure of the statement , another private function will handle the tuple
     * @param statement input statement
     */
-  def handle(statement: Statement) : Unit = handle(statement.getSubject, statement.getPredicate, statement.getObject)
+  def handle(statement: Statement) : Unit = {
+//    println(statement)
+    handle(statement.getSubject, statement.getPredicate, statement.getObject)
+  }
 
   private def handle(subject: Resource, predicate : IRI, obj : Value) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) => addProp(b.getLocalName, c.stringValue()) // handle literal
@@ -92,7 +93,7 @@ class Node(private val id : U, private var label : U) {
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 
-  def getLabel : String = if (hasLabel) label.getLocalName else ""
+  def getLabel : String = if (hasLabel) label.getLocalName else "NONE"
   def getPropSet : mutable.HashMap[String, Boolean] = this.propSet
   def getId : String = this.id.getNamespace + this.id.getLocalName
 }
@@ -100,6 +101,7 @@ class Node(private val id : U, private var label : U) {
 object Node {
 
   def build(statement: Statement) : Node = {
+//    println(statement)
     instance(statement.getSubject, statement.getPredicate, statement.getObject)
   }
   // only UUL UUU UUB can create or add new node

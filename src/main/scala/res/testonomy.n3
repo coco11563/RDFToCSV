@@ -1,0 +1,25 @@
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/358216:synonymName:8e001230fd4913c81efc3babc3c7f4b2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/TaxonName> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/348515:authorityName:043be8980703129174887470c05e7d60> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/nameclass> "authorityName" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/348515:authorityName:043be8980703129174887470c05e7d60> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/taxname> "Hyophorbe verschaffeltii H.Wendl." .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/348515:authorityName:043be8980703129174887470c05e7d60> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/taxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/348515> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/348515:authorityName:043be8980703129174887470c05e7d60> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/TaxonName> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/74451:scientificName:1e6411f131da22acc76d9e7d7abd5082> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/nameclass> "scientificName" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/74451:scientificName:1e6411f131da22acc76d9e7d7abd5082> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/taxname> "Bujurquina" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/74451:scientificName:1e6411f131da22acc76d9e7d7abd5082> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/taxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/74451> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/74451:scientificName:1e6411f131da22acc76d9e7d7abd5082> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/TaxonName> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98509> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/divisionId> "0" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98509> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/emblCode> "SP" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98509> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/nodeRank> "species" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98509> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/parentTaxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98508> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98509> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/ancestorTaxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98508> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/98509> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/TaxonNode> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/221067> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/divisionId> "4" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/221067> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/emblCode> "" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/221067> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/nodeRank> "genus" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/221067> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/parentTaxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/192931> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/221067> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/ancestorTaxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/192931> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/221067> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/TaxonNode> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/359360:scientificName:38d9411e8e030045104a7e3c0732aad1> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/nameclass> "scientificName" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/359360:scientificName:38d9411e8e030045104a7e3c0732aad1> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/taxname> "Sporosarcina sp. YM6-219" .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/359360:scientificName:38d9411e8e030045104a7e3c0732aad1> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/taxid> <http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/359360> .
+<http://gcm.wdcm.org/data/gcmAnnotation1/taxonomy/name/359360:scientificName:38d9411e8e030045104a7e3c0732aad1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/TaxonName> .

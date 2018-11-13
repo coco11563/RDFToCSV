@@ -4,7 +4,7 @@ import java.util
 import java.util.concurrent._
 
 import datastructure.Obj.TypeMap.{B, L, U}
-import datastructure.Util.ThreadUtils._
+import datastructure.Util.ThreadUtils
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.rio.RDFHandler
 
@@ -22,13 +22,14 @@ import scala.collection.mutable
 class NodeTreeHandler extends RDFHandler with Callable[Int]{
   val NodeMap : ConcurrentHashMap[IRI, Node] = new ConcurrentHashMap[IRI, Node]()
   val BNodeMap : ConcurrentHashMap[BNode, mutable.Set[Node]] = new ConcurrentHashMap[BNode, mutable.Set[Node]]()
-  val relationQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
+  val fileStatementQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   val unHandleBNodeTail : mutable.Queue[Statement] = new mutable.Queue[Statement]()
-  lazy val DEFAULT: ThreadPoolExecutor = createDefaultPool
+  lazy val DEFAULT: ExecutorService = ThreadUtils.DEFAULT
 
   override def handleStatement(statement: Statement) : Unit = {
+    fileStatementQueue.enqueue(statement)
 //    val timer = System.currentTimeMillis()
-    handleStatement(statement.getSubject, statement.getPredicate, statement.getObject, statement)
+
 //    println(s"handle one statement in ${System.currentTimeMillis() - timer}")
   }
 
@@ -84,9 +85,9 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   }
 
   override def endRDF(): Unit = {
-    println("start to clean the queue")
-    val nums = intoFuture[Int](DEFAULT,this)
-    println(nums.get())
+//    println("start to clean the queue")
+//    val nums = intoFuture[Int](DEFAULT,this)
+//    println(nums.get())
   }
 
   override def handleNamespace(prefix: String, uri: String): Unit = {}
@@ -110,7 +111,18 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
     * @return the processed statements num
     */
   override def call(): Int = {
+    while (fileStatementQueue.nonEmpty) {
+      val statement = fileStatementQueue.dequeue()
+      handleStatement(statement.getSubject, statement.getPredicate, statement.getObject, statement)
+    }
     println("start to clean the queue")
+    val c = handleBNodeQueue
+    println("done to clean the queue")
+    c
+  }
+
+  //only get; thread safe
+  def handleBNodeQueue : Int = {
     var count = 0 // processed statements count
     var perCount = 0 // this iterate's process statements count
     var done = false
@@ -118,7 +130,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
       val statements : mutable.Seq[Statement] = unHandleBNodeTail.dequeueAll(_ => true) // dequeue all
       statements.foreach(
         statement => {
-//          println(statement.getSubject.stringValue())
+          //          println(statement.getSubject.stringValue())
           val subject = statement.getSubject
           val obj = statement.getObject
           val predicate = statement.getPredicate

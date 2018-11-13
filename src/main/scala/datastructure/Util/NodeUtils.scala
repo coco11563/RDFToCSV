@@ -7,10 +7,12 @@ import datastructure.Node
 
 import scala.collection.mutable
 
+
+
 object NodeUtils {
-  def buildLabelNodeMap(nodeIter : util.Collection[Node]) : mutable.HashMap[String, mutable.HashSet[Node]] = {
+  def buildLabelNodeMap(nodeIter : Iterator[Node]) : mutable.HashMap[String, mutable.HashSet[Node]] = {
     val map = new mutable.HashMap[String, mutable.HashSet[Node]]()
-    nodeIter.forEach(n => {
+    nodeIter.foreach(n => {
       val label = n.getLabel
       if (map.contains(label)) map(label).add(n) else map.put(label, mutable.HashSet[Node](n))
     })
