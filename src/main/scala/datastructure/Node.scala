@@ -14,7 +14,7 @@ class Node(private val id : U, private var label : U) {
     * @param id you know what id means
     * @return
     */
-  private def this(id : U) = this(id, null, propSet)
+  private def this(id : U) = this(id, null)
 
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
 
@@ -24,14 +24,14 @@ class Node(private val id : U, private var label : U) {
 
   private val nodeRelation = new mutable.HashSet[(String, U, U)]()
 
-  val propSet : ConcurrentHashMap[String, Boolean] = new ConcurrentHashMap[String, Boolean]()
+  val propSet : mutable.HashMap[String, Boolean] = new mutable.HashMap[String, Boolean]()
 
   private def addProp(iri: String, lit : String) : Unit = {
     if (properties.contains(iri)) {
       val s = properties(iri)
       if (!s.contains(lit)){
         s.add(lit)
-        propSet.replace(iri, true)
+        propSet.update(iri, true)
       }
     }
     else {
@@ -72,7 +72,7 @@ class Node(private val id : U, private var label : U) {
   def getProp(predicate : String) : mutable.HashSet[String] = {
     if (properties.contains(predicate))
       properties(predicate)
-    else null
+    else mutable.HashSet[String]("")
   }
 
   /**
@@ -91,6 +91,10 @@ class Node(private val id : U, private var label : U) {
     case _ =>
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
+
+  def getLabel : String = if (hasLabel) label.getLocalName else ""
+  def getPropSet : mutable.HashMap[String, Boolean] = this.propSet
+  def getId : String = this.id.getNamespace + this.id.getLocalName
 }
 
 object Node {

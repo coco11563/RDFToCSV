@@ -6,9 +6,7 @@ import java.util.concurrent.locks.LockSupport
 object ThreadUtils {
   def intoFuture[T](pool: ExecutorService , callable: Callable[T]): Future[T] = {
     pool.submit(() => {
-      def foo(): T = try {
-        callable.call
-      }
+      def foo(): T = callable.call
       foo()
     })
   }

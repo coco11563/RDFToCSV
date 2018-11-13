@@ -29,5 +29,8 @@ assemblyMergeStrategy in assembly := {
 libraryDependencies ++= Seq(
   "org.eclipse.rdf4j" % "rdf4j-rio-api" % "2.4.1",
   "org.eclipse.rdf4j" % "rdf4j-rio-ntriples" % "2.4.1",
-  "org.eclipse.rdf4j" % "rdf4j-rio-n3" % "2.4.1"
+  "org.eclipse.rdf4j" % "rdf4j-rio-n3" % "2.4.1",
+//  "org.slf4j" % "slf4j-api" % "1.7.25",
+//  "org.slf4j" % "slf4j-log4j12" % "1.7.25"
+//  "org.apache.logging.log4j" % "log4j-core" % "2.11.1"
 )

@@ -1,5 +1,6 @@
 package datastructure
 
+import java.util
 import java.util.concurrent._
 
 import datastructure.Obj.TypeMap.{B, L, U}
@@ -19,14 +20,16 @@ import scala.collection.mutable
   *
   */
 class NodeTreeHandler extends RDFHandler with Callable[Int]{
-  val NodeMap : mutable.HashMap[IRI, Node] = new mutable.HashMap[IRI, Node]()
-  val BNodeMap : mutable.HashMap[BNode, mutable.Set[Node]] = new mutable.HashMap[BNode, mutable.Set[Node]]()
+  val NodeMap : ConcurrentHashMap[IRI, Node] = new ConcurrentHashMap[IRI, Node]()
+  val BNodeMap : ConcurrentHashMap[BNode, mutable.Set[Node]] = new ConcurrentHashMap[BNode, mutable.Set[Node]]()
   val relationQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   val unHandleBNodeTail : mutable.Queue[Statement] = new mutable.Queue[Statement]()
   lazy val DEFAULT: ThreadPoolExecutor = createDefaultPool
 
   override def handleStatement(statement: Statement) : Unit = {
+//    val timer = System.currentTimeMillis()
     handleStatement(statement.getSubject, statement.getPredicate, statement.getObject, statement)
+//    println(s"handle one statement in ${System.currentTimeMillis() - timer}")
   }
 
   /**
@@ -37,18 +40,18 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
     * @param obj the ori statement's object value (Value)
     * @param statement the origin statement
     */
-
+  // Node map -> get   BNodeMap -> write and get
   def handleStatement(subject: Resource, predicate : IRI, obj : Value, statement: Statement) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) =>
-      if (NodeMap.contains(a)) NodeMap(a).handle(statement)
+      if (NodeMap.contains(a)) NodeMap.get(a).handle(statement)
       else NodeMap.put(a, Node.build(statement))
     case (a:U, b:U, c:U) =>
-      if (NodeMap.contains(a)) NodeMap(a).handle(statement)
+      if (NodeMap.contains(a)) NodeMap.get(a).handle(statement)
       else NodeMap.put(a, Node.build(statement))
     case (a:U, b:U, c:B) =>
       val node : Node =
         if (NodeMap.contains(a)) {
-          val n = NodeMap(a)
+          val n = NodeMap.get(a)
           n.handle(statement)
           n
         }
@@ -57,27 +60,31 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
         NodeMap.put(a, n)
         n
       }
-      if (BNodeMap.contains(c)) BNodeMap(c).add(node)
+      if (BNodeMap.contains(c)) BNodeMap.get(c).add(node)
       else BNodeMap.put(c, mutable.Set(node))
     case (a:B, b:U, c:L) =>
-      if (BNodeMap.contains(a)) BNodeMap(a).foreach(n => n.handle(statement))
+      if (BNodeMap.contains(a)) BNodeMap.get(a).foreach(n => n.handle(statement))
       else unHandleBNodeTail.enqueue(statement)
     case (a:B, b:U, c:U) =>
-      if (BNodeMap.contains(a)) BNodeMap(a).foreach(n => n.handle(statement))
+      if (BNodeMap.contains(a)) BNodeMap.get(a).foreach(n => n.handle(statement))
       else unHandleBNodeTail.enqueue(statement)
     case (a:B, b:U, c:B) =>
-      if (BNodeMap.contains(a)) BNodeMap(a).foreach(n => {
-        n.handle(statement)
-        if(BNodeMap.contains(c)) BNodeMap(c).add(n)
-        else BNodeMap.put(c,mutable.Set(n))
-      })
+      if (BNodeMap.contains(a))
+        BNodeMap.get(a).foreach(n => {
+          n.handle(statement)
+          if(BNodeMap.contains(c)) BNodeMap.get(c).add(n)
+          else BNodeMap.put(c,mutable.Set(n))
+        })
       else unHandleBNodeTail.enqueue(statement)
     case _ =>
   }
 
-  override def startRDF(): Unit = {}
+  override def startRDF(): Unit = {
+    println("start parser")
+  }
 
   override def endRDF(): Unit = {
+    println("start to clean the queue")
     val nums = intoFuture[Int](DEFAULT,this)
     println(nums.get())
   }
@@ -86,7 +93,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
 
   override def handleComment(comment: String): Unit = {}
 
-  def getAllNode: Iterable[Node] = NodeMap.values
+  def getAllNode: util.Collection[Node] = NodeMap.values()
   /**
     * this call method will be called after all normal node processed
     *
@@ -103,6 +110,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
     * @return the processed statements num
     */
   override def call(): Int = {
+    println("start to clean the queue")
     var count = 0 // processed statements count
     var perCount = 0 // this iterate's process statements count
     var done = false
@@ -116,19 +124,20 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
           val predicate = statement.getPredicate
           (subject, obj, predicate) match {
             case (a:B, b:U, c:L) =>
-              if (BNodeMap.contains(a)) {BNodeMap(a).foreach(n => n.handle(statement)) ; count += 1; perCount += 1}
+              if (BNodeMap.contains(a)) {BNodeMap.get(a).foreach(n => n.handle(statement)) ; count += 1; perCount += 1}
               else unHandleBNodeTail.enqueue(statement)
             case (a:B, b:U, c:U) =>
-              if (BNodeMap.contains(a)) {BNodeMap(a).foreach(n => n.handle(statement)) ; count += 1; perCount += 1}
+              if (BNodeMap.contains(a)) {BNodeMap.get(a).foreach(n => n.handle(statement)) ; count += 1; perCount += 1}
               else unHandleBNodeTail.enqueue(statement)
             case (a:B, b:U, c:B) =>
-              if (BNodeMap.contains(a)) BNodeMap(a).foreach(n => {
+              if (BNodeMap.contains(a)) BNodeMap.get(a).foreach(n => {
                 n.handle(statement)
-                if(BNodeMap.contains(c)) BNodeMap(c).add(n)
+                if(BNodeMap.contains(c)) BNodeMap.get(c).add(n)
                 else BNodeMap.put(c,mutable.Set(n))
                 count += 1; perCount += 1
               })
               else unHandleBNodeTail.enqueue(statement)
+            case _ => throw new IllegalStateException(s"you have a wrong input will we empty the queue")
           }
         })
       if (perCount == 0) done = true
