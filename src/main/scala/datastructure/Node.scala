@@ -82,7 +82,7 @@ class Node(private val id : U, private var label : U) {
     handle(statement.getSubject, statement.getPredicate, statement.getObject)
   }
 
-  private def handle(subject: Resource, predicate : IRI, obj : Value) : Unit = (subject, predicate, obj) match {
+  def handle(subject: Resource, predicate : IRI, obj : Value) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) => addProp(b.getLocalName, c.stringValue()) // handle literal
     case (a:U, b:U, c:U) => if (b.equals(RDF.TYPE)) addLabel(c) else addNodeRelation(b.getLocalName, c)//handle label
     case (a:U, b:U, c:B) => addBNode(c, b.getLocalName) // handle this by adding
@@ -102,10 +102,10 @@ object Node {
 
   def build(statement: Statement) : Node = {
 //    println(statement)
-    instance(statement.getSubject, statement.getPredicate, statement.getObject)
+    instanceOf(statement.getSubject, statement.getPredicate, statement.getObject)
   }
   // only UUL UUU UUB can create or add new node
-  private def instance(subject: Resource, predicate : IRI, obj : Value) : Node = (subject, predicate, obj) match {
+  def instanceOf(subject: Resource, predicate : IRI, obj : Value) : Node = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) => val node = new Node(a); node.addProp(b.getLocalName, c.stringValue()); node
     case (a:U, b:U, c:U) =>
       if (b.equals(RDF.TYPE)) //type label
