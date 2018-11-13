@@ -18,7 +18,7 @@ lazy val root = (project in file(".")).
     name := "SeqN3CSVProcessor",
     scalaVersion := "2.11.8",
     scalaVersion in ThisBuild := "2.11.8",
-    mainClass in Compile := Some("")
+    mainClass in Compile := Some("Main")
   ).enablePlugins()
 
 assemblyMergeStrategy in assembly := {

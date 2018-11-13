@@ -1,9 +1,11 @@
 package datastructure.Util
 
+import java.io.FileWriter
 import java.util
 
 import datastructure.Node
 import datastructure.Obj.TypeMap.TRIPLE
+import org.eclipse.rdf4j.model.Statement
 import org.eclipse.rdf4j.model.impl.{SimpleIRI, SimpleLiteral, SimpleValueFactory}
 
 import scala.collection.mutable
@@ -51,7 +53,7 @@ object NodeUtils {
 
   def buildCSVPerNode(node: Node, schema : mutable.Map[String, Boolean]) : String = {
     val s = for (key <- schema.keySet) yield {
-      val set = node.getProp(key)
+      val set = node.getProp(key).map(_.replace(",", " "))
       if (set.size > 1) set.reduce(_ + ";" + _)
       else set.head
     }
@@ -68,7 +70,15 @@ object NodeUtils {
     }
     n
   }
-
+  def buildNodeByStatement(iter : Iterable[Statement]) : Node = {
+    var n : Node = null
+    for (triple <- iter) {
+      if (n == null)
+        n = Node.build(triple)
+      else n.handle(triple)
+    }
+    n
+  }
   def main(args: Array[String]): Unit = {
     val vf = SimpleValueFactory.getInstance()
     var c = Array((vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate1"),  vf.createLiteral("lit1")),
@@ -82,5 +92,9 @@ object NodeUtils {
     var n = buildNode(c.toIterable)
     print(n.getLabel)
   }
-//  def writeFile(ls : Array[String], append : Boolean, outputPath : String, outputName : String) : Unit = ???
+  def writeFile(ls : Array[String], append : Boolean, outputPath : String, outputName : String) : Unit = {
+    val out = new FileWriter(outputPath + outputName,append)
+    for (i <- ls) out.write(i + "\r\n")
+    out.close()
+  }
 }

@@ -5,7 +5,7 @@ import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.vocabulary.RDF
 
 import scala.collection.mutable
-class Node(private val id : U, private var label : U) {
+class Node(private val id : U, private var label : U) extends Serializable {
   /**
     * constructor for UUL and UUB or relation type's UUU
     * will build a node without the label
@@ -95,7 +95,7 @@ class Node(private val id : U, private var label : U) {
 
   def getLabel : String = if (hasLabel) label.getLocalName else "NONE"
   def getPropSet : mutable.HashMap[String, Boolean] = this.propSet
-  def getId : String = this.id.getNamespace + this.id.getLocalName
+  def getId : String = this.id.stringValue()
 }
 
 object Node {
