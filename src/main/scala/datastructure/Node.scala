@@ -1,26 +1,30 @@
 package datastructure
 
-import datastructure.Obj.TypeMap.{B, L, U}
+import datastructure.Obj.TypeMap.{L, U, V}
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.vocabulary.RDF
 
 import scala.collection.mutable
-class Node(private val id : U, private var label : U) extends Serializable {
+class Node(private val id : String, private var label : U) extends Serializable {
   /**
     * constructor for UUL and UUB or relation type's UUU
     * will build a node without the label
     * @param id you know what id means
     * @return
     */
-  private def this(id : U) = this(id, null)
+  private def this(id : V) = this(id.stringValue(), null)
+  private def this(id : String) = this(id, null)
+  private def this(id : V, label : U) = this(id.stringValue(), label)
 
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
 
-  private val bNodePredicate = new mutable.HashMap[B, String]()
+  private val secondLabels : mutable.HashSet[String] = new mutable.HashSet[String]()
+//  @Deprecated
+//  private val bNodePredicate = new mutable.HashMap[B, String]()
+//  @Deprecated
+//  private val bNodeRelation = new mutable.HashSet[(String, U, U)]()
 
-  private val bNodeRelation = new mutable.HashSet[(String, U, U)]()
-
-  private val nodeRelation = new mutable.HashSet[(String, U, U)]()
+  private val nodeRelation = new mutable.HashSet[(String, String, String)]()
 
   val propSet : mutable.HashMap[String, Boolean] = new mutable.HashMap[String, Boolean]()
 
@@ -38,36 +42,46 @@ class Node(private val id : U, private var label : U) extends Serializable {
     }
   }
 
-  /**
-    * @param bNode inserted bNode
-    * @param predicate the bNode statement's predicate
-    */
-  private def addBNode(bNode: B, predicate: String) : Unit =  if (!bNodePredicate.contains(bNode)) bNodePredicate.put(bNode, predicate)
+//  /**
+//    * @param bNode inserted bNode
+//    * @param predicate the bNode statement's predicate
+//    */
+//  @Deprecated
+//  private def addBNode(bNode: B, predicate: String) : Unit =  if (!bNodePredicate.contains(bNode)) bNodePredicate.put(bNode, predicate)
+//
+//  /**
+//    *
+//    * @param predicate the relation name
+//    * @param id point id
+//    */
+//  @Deprecated
+//  private def addBNodeRelation (predicate : String, id : U): Boolean = bNodeRelation.add((predicate, this.id, id))
 
-  /**
-    *
-    * @param predicate the relation name
-    * @param id point id
-    */
-  private def addBNodeRelation (predicate : String, id : U): Boolean = bNodeRelation.add((predicate, this.id, id))
-
-  private def addNodeRelation (predicate : String, id : U) : Boolean = nodeRelation.add((predicate, this.id, id))
-  /**
-    * bNode adding method for insert bNode which have a bNode precedent(form of BUB)
-    * the predicate of this bnode will be APPENDED by their precedent
-    * @param precedent preceding Bnode id which HAS TO BE added before
-    * @param succession succeeding Bnode id
-    * @param sucPredicate succeeding Bnode predicate
-    */
-  private def addSucceedBNodeAppend(precedent : B, succession : B, sucPredicate : String) : Unit = addBNode(succession, bNodePredicate(precedent) + sucPredicate)
-
-  private def getBNodePredicate(B : B) : String = bNodePredicate(B)
+  private def addNodeRelation (predicate : String, id : Value) : Boolean = nodeRelation.add((predicate, this.id, id.stringValue()))
+//  /**
+//    * bNode adding method for insert bNode which have a bNode precedent(form of BUB)
+//    * the predicate of this bnode will be APPENDED by their precedent
+//    * @param precedent preceding Bnode id which HAS TO BE added before
+//    * @param succession succeeding Bnode id
+//    * @param sucPredicate succeeding Bnode predicate
+//    */
+//  private def addSucceedBNodeAppend(precedent : B, succession : B, sucPredicate : String) : Unit = addBNode(succession, bNodePredicate(precedent) + sucPredicate)
+//
+//  private def getBNodePredicate(B : B) : String = bNodePredicate(B)
 
   private def hasLabel : Boolean = label != null
 
-  private def addLabel(label : U) : Unit = if (!hasLabel) this.label = label
+  private def addLabel(label : U) : Unit = {
+    if (!hasLabel) {
+      this.label = label
+      secondLabels.add(label.getLocalName)
+    }
+    else secondLabels.add(label.getLocalName)
+  }
 
-  def getBNodeMap : mutable.HashMap[B, String] = this.bNodePredicate
+
+
+//  def getBNodeMap : mutable.HashMap[B, String] = this.bNodePredicate
 
   def getProp(predicate : String) : mutable.HashSet[String] = {
     if (properties.contains(predicate))
@@ -85,35 +99,36 @@ class Node(private val id : U, private var label : U) extends Serializable {
   }
 
   def handle(subject: Resource, predicate : IRI, obj : Value) : Unit = (subject, predicate, obj) match {
-    case (a:U, b:U, c:L) => addProp(b.getLocalName, c.stringValue()) // handle literal
-    case (a:U, b:U, c:U) => if (b.equals(RDF.TYPE)) addLabel(c) else addNodeRelation(b.getLocalName, c)//handle label
-    case (a:U, b:U, c:B) => addBNode(c, b.getLocalName) // handle this by adding
-    case (a:B, b:U, c:L) => addProp(getBNodePredicate(a) + ":"+ b.getLocalName, c.stringValue()) // attach this
-    case (a:B, b:U, c:U) => if (!b.equals(RDF.TYPE)) addBNodeRelation(getBNodePredicate(a) + ":"+ b.getLocalName, c) // discard the blank node label
-    case (a:B, b:U, c:B) => addBNode(c, getBNodePredicate(a) + ":" + b.getLocalName)
+    case (a:V, b:U, c:L) => addProp(b.getLocalName, c.stringValue()) // handle literal
+    case (a:V, b:U, c:U) => if (b.equals(RDF.TYPE)) addLabel(c) else addNodeRelation(b.getLocalName, c)//handle label
+    case (a:V, b:U, c:V) => addNodeRelation(b.getLocalName, c) // handle this by adding
     case _ =>
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 
   def getLabel : String = if (hasLabel) label.getLocalName else "NONE"
+  def getAllLabel : String = this.secondLabels.reduce(_ + ";" + _)
   def getPropSet : mutable.HashMap[String, Boolean] = this.propSet
-  def getId : String = this.id.stringValue()
+  def getId : String = this.id
 }
 
 object Node {
 
   def build(statement: Statement) : Node = {
-//    println(statement)
     instanceOf(statement.getSubject, statement.getPredicate, statement.getObject)
   }
   // only UUL UUU UUB can create or add new node
   def instanceOf(subject: Resource, predicate : IRI, obj : Value) : Node = (subject, predicate, obj) match {
-    case (a:U, b:U, c:L) => val node = new Node(a); node.addProp(b.getLocalName, c.stringValue()); node
-    case (a:U, b:U, c:U) =>
+    case (a:V, b:U, c:L) => val node = new Node(a); node.addProp(b.getLocalName, c.stringValue()); node
+    case (a:V, b:U, c:U) =>
       if (b.equals(RDF.TYPE)) //type label
         new Node(a, c)
-      else new Node(a)
-    case (a:U, b:U, c:B) => val node = new Node(a); node.addBNode(c, b.getLocalName); node
+      else {
+        val n = new Node(a)
+        n.addNodeRelation(b.getLocalName, c)
+        n
+      }
+    case (a:V, b:U, c:V) => val node = new Node(a); node.addNodeRelation(b.getLocalName, c); node
     case _ => throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 

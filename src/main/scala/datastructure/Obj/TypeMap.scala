@@ -7,4 +7,5 @@ object TypeMap {
   type B = BNode
   type L = Literal
   type TRIPLE = (Resource, IRI, Value)
+  type V = Value
 }

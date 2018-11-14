@@ -55,14 +55,14 @@ object SparkUtils {
     nodeIter.map(n => buildCSVPerNode(n, m))
   }
 
-  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
-    nodeArray
-      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
-      .flatMap(_.toList)
-      .map(a => (a._2, mutable.Set(a._1)))
-      .reduceByKey(_ ++ _)
-      .collect()
-  }
+//  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
+//    nodeArray
+//      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
+//      .flatMap(_.toList)
+//      .map(a => (a._2, mutable.Set(a._1)))
+//      .reduceByKey(_ ++ _)
+//      .collect()
+//  }
 
   def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
     nodeArray.map(n => n.getId -> n).collect().toMap
@@ -80,21 +80,21 @@ object SparkUtils {
 
     val nodeRDD = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsNNode)(nodes.toList).map(i => NodeUtils.buildNodeByStatement(i))
 
-    val bnodeMap = mutable.HashMap(buildBNodePair(nodeRDD) : _*)
+//    val bnodeMap = mutable.HashMap(buildBNodePair(nodeRDD) : _*)
+//
+//    val nodeMap = buildNodeMap(nodeRDD)
+//
+//    val bnodeArray = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsBNode)(nodes.toList).flatMap(_.toList).collect()
 
-    val nodeMap = buildNodeMap(nodeRDD)
+//    val (bub, tail) : (mutable.Queue[Statement], mutable.Queue[Statement]) = NodeUtils.bNodeBiFilter(bnodeArray)
+//
+//    NodeUtils.processBUBNode(bub, nodeMap, bnodeMap)
+//
+//    NodeUtils.processBNode(tail, nodeMap, bnodeMap)
 
-    val bnodeArray = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsBNode)(nodes.toList).flatMap(_.toList).collect()
+//    val finalNodeArray = sc.parallelize(nodeMap.values.toList)
 
-    val (bub, tail) : (mutable.Queue[Statement], mutable.Queue[Statement]) = NodeUtils.bNodeBiFilter(bnodeArray)
-
-    NodeUtils.processBUBNode(bub, nodeMap, bnodeMap)
-
-    NodeUtils.processBNode(tail, nodeMap, bnodeMap)
-
-    val finalNodeArray = sc.parallelize(nodeMap.values.toList)
-
-    val labeledFinalNodeArray = finalNodeArray
+    val labeledFinalNodeArray = nodeRDD
       .map(n => (n.getLabel, n))
       .groupByKey()
       .collect()
@@ -105,6 +105,8 @@ object SparkUtils {
       val labeledNodes = sc.parallelize(nodelist._2.toList)
 
       val schemaMap = SparkUtils.generateSchema(labeledNodes)
+
+      println(schemaMap.keySet)
 
       val csvStr = SparkUtils.buildCSV(labeledNodes, schemaMap).collect()
 
