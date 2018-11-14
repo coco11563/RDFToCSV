@@ -94,7 +94,8 @@ object SparkUtils {
 
     val finalNodeArray = sc.parallelize(nodeMap.values.toList)
 
-    val labeledFinalNodeArray = finalNodeArray.map(n => (n.getLabel, n))
+    val labeledFinalNodeArray = finalNodeArray
+      .map(n => (n.getLabel, n))
       .groupByKey()
       .collect()
 
