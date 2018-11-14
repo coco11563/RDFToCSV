@@ -4,8 +4,9 @@ import java.io.FileWriter
 import java.util
 
 import datastructure.Node
-import datastructure.Obj.TypeMap.TRIPLE
-import org.eclipse.rdf4j.model.Statement
+import datastructure.Obj.TypeMap.{B, TRIPLE, U}
+import org.apache.spark.rdd.RDD
+import org.eclipse.rdf4j.model.{BNode, Statement}
 import org.eclipse.rdf4j.model.impl.{SimpleIRI, SimpleLiteral, SimpleValueFactory}
 
 import scala.collection.mutable
@@ -13,6 +14,7 @@ import scala.collection.mutable
 
 
 object NodeUtils {
+
   def buildLabelNodeMap(nodeIter : Iterator[Node]) : mutable.HashMap[String, mutable.HashSet[Node]] = {
     val map = new mutable.HashMap[String, mutable.HashSet[Node]]()
     nodeIter.foreach(n => {
@@ -92,9 +94,68 @@ object NodeUtils {
     var n = buildNode(c.toIterable)
     print(n.getLabel)
   }
+
+  def bNodeBiFilter(nodeArray : Array[Statement]) : (mutable.Queue[Statement], mutable.Queue[Statement]) = {
+    val bubQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
+    val btailQueue : mutable.Queue[Statement] = new mutable.Queue[Statement]()
+    nodeArray.foreach(s => (s.getSubject, s.getPredicate, s.getObject) match {
+      case (a : B ,b : U, c : B) => bubQueue.enqueue(s)
+      case _ => btailQueue.enqueue(s)
+    })
+    (bubQueue, btailQueue)
+  }
+
   def writeFile(ls : Array[String], append : Boolean, outputPath : String, outputName : String) : Unit = {
     val out = new FileWriter(outputPath + outputName,append)
     for (i <- ls) out.write(i + "\r\n")
     out.close()
+  }
+
+  /**
+    * @SideEffect this one got serious side effect
+    * @param bubQueue a queue only contain BUB formal statement
+    * @param nodeMap str -> Node, a pair of id and node
+    * @param bnodeMap B -> Set[String] a pair of BNode and id
+    */
+  def processBUBNode (bubQueue : mutable.Queue[Statement], nodeMap : Map[String, Node], bnodeMap : mutable.HashMap[B, mutable.Set[String]]) : Unit = {
+    val count = bubQueue.size
+    var counter = 0
+    while (bubQueue.nonEmpty && counter * 2 == count) {
+      val s = bubQueue.dequeue()
+      val stat = s.getSubject.asInstanceOf[B]
+      if (bnodeMap.contains(stat)) {
+        val set = bnodeMap(stat)
+        val obj = s.getObject.asInstanceOf[B]
+        for (id <- set) {
+          nodeMap(id).handle(s)
+          if (bnodeMap.contains(obj)) bnodeMap(obj).add(id)
+          else bnodeMap.put(obj, mutable.HashSet(id))
+        }
+      }
+      else bubQueue.enqueue(s)
+      counter += 1
+    }
+  }
+
+  /**
+    * @SideEffect this one got serious side effect
+    * @param bnodeQueue a queue only contain *NOT* BUB formal statement
+    * @param nodeMap str -> Node, a pair of id and node
+    * @param bnodeMap B -> Set[String] a pair of BNode and id
+    */
+  def processBNode(bnodeQueue  : mutable.Queue[Statement], nodeMap : Map[String, Node], bnodeMap : mutable.HashMap[B, mutable.Set[String]]) : Unit = {
+    val count = bnodeQueue.size
+    var counter = 0
+    while (bnodeQueue.nonEmpty && counter == count){
+      val statement = bnodeQueue.dequeue()
+      val bid = statement.getSubject.asInstanceOf[B]
+      if (bnodeMap.contains(bid)) {
+        val set = bnodeMap(bid)
+        for (id <- set) {
+          nodeMap(id).handle(statement)
+        }
+      }
+      counter += 1
+    }
   }
 }

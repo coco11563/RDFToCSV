@@ -1,18 +1,22 @@
 package datastructure.Util
 import java.io.{File, FileReader}
 
-import datastructure.{Node, NodeTreeHandler}
-import datastructure.Obj.TypeMap.TRIPLE
+import datastructure.Obj.TypeMap.B
 import datastructure.Util.NodeUtils.buildCSVPerNode
-import org.apache.spark.{SparkConf, SparkContext}
+import datastructure.{Node, NodeTreeHandler}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import org.eclipse.rdf4j.model.{BNode, IRI, Statement}
 import org.eclipse.rdf4j.rio.{RDFFormat, Rio}
 
 import scala.collection.mutable
 object SparkUtils {
 
-  def groupById(sc : SparkContext)(triples : List[Statement]):RDD[Iterable[Statement]] = sc.parallelize(triples).map(a => (a.getSubject , a)).groupByKey().values
+  def groupById(sc : SparkContext)(triples : List[Statement]):RDD[Iterable[Statement]] =
+    sc.parallelize(triples)
+      .map(a => (a.getSubject , a))
+      .groupByKey()
+      .values
 
   def filterByIsBNode(iter : Iterable[Statement]) : Boolean = iter.head.getSubject.isInstanceOf[BNode]
 
@@ -51,25 +55,61 @@ object SparkUtils {
     nodeIter.map(n => buildCSVPerNode(n, m))
   }
 
+  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
+    nodeArray
+      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
+      .flatMap(_.toList)
+      .map(a => (a._2, mutable.Set(a._1)))
+      .reduceByKey(_ ++ _)
+      .collect()
+  }
 
-  def process(path:String) :Unit = {
-    val rdfParser = Rio.createParser(RDFFormat.N3)
+  def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
+    nodeArray.map(n => n.getId -> n).collect().toMap
+  }
+
+  def process(path:String, sc : SparkContext, format : RDFFormat) :Unit = {
+    val rdfParser = Rio.createParser(format)
     val handler = new NodeTreeHandler
     println("done init")
     rdfParser.setRDFHandler(handler)
     rdfParser.parse(new FileReader(new File(path)), "")
     println("done resolve")
-    val sparkConf = new SparkConf()
-      .setAppName("ProcessOnRDFFFFFFFFFFF")
-      .set("spark.driver.maxResultSize", "4g")
-    val sc : SparkContext = new SparkContext(sparkConf)
-    val nodes = handler.fileStatementQueue
-    import scala.collection.JavaConverters._
-    val nodeArray = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsNNode)(nodes.toList).map(i => NodeUtils.buildNodeByStatement(i))
-    val schemaMap = SparkUtils.generateSchema(nodeArray)
-    val csvStr = SparkUtils.buildCSV(nodeArray, schemaMap).collect()
-    val csvHead = NodeUtils.stringSchema(schemaMap)
-    NodeUtils.writeFile(csvHead +: csvStr , append = false, "/data2/test/" , path.split("/").reduce(_ + _).replace("n3", "csv"))
 
+    val nodes = handler.fileStatementQueue
+
+    val nodeRDD = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsNNode)(nodes.toList).map(i => NodeUtils.buildNodeByStatement(i))
+
+    val bnodeMap = mutable.HashMap(buildBNodePair(nodeRDD) : _*)
+
+    val nodeMap = buildNodeMap(nodeRDD)
+
+    val bnodeArray = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsBNode)(nodes.toList).flatMap(_.toList).collect()
+
+    val (bub, tail) : (mutable.Queue[Statement], mutable.Queue[Statement]) = NodeUtils.bNodeBiFilter(bnodeArray)
+
+    NodeUtils.processBUBNode(bub, nodeMap, bnodeMap)
+
+    NodeUtils.processBNode(tail, nodeMap, bnodeMap)
+
+    val finalNodeArray = sc.parallelize(nodeMap.values.toList)
+
+    val labeledFinalNodeArray = finalNodeArray.map(n => (n.getLabel, n))
+      .groupByKey()
+      .collect()
+
+    for (nodelist <- labeledFinalNodeArray) {
+      val label = nodelist._1
+
+      val labeledNodes = sc.parallelize(nodelist._2.toList)
+
+      val schemaMap = SparkUtils.generateSchema(labeledNodes)
+
+      val csvStr = SparkUtils.buildCSV(labeledNodes, schemaMap).collect()
+
+      val csvHead = NodeUtils.stringSchema(schemaMap)
+
+      NodeUtils.writeFile(csvHead +: csvStr , append = false, "/data2/test/" , (path.split("/").reduce(_ + _) + label).replace("n3", "csv"))
+    }
   }
 }

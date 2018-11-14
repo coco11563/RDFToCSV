@@ -67,6 +67,8 @@ class Node(private val id : U, private var label : U) extends Serializable {
 
   private def addLabel(label : U) : Unit = if (!hasLabel) this.label = label
 
+  def getBNodeMap : mutable.HashMap[B, String] = this.bNodePredicate
+
   def getProp(predicate : String) : mutable.HashSet[String] = {
     if (properties.contains(predicate))
       properties(predicate)
@@ -114,4 +116,5 @@ object Node {
     case (a:U, b:U, c:B) => val node = new Node(a); node.addBNode(c, b.getLocalName); node
     case _ => throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
+
 }
