@@ -20,7 +20,7 @@ object SparkUtils {
 
   def filterByIsBNode(iter : Iterable[Statement]) : Boolean = iter.head.getSubject.isInstanceOf[BNode]
 
-  def filterByIsNNode(iter : Iterable[Statement]) : Boolean = iter.head.getSubject.isInstanceOf[IRI]
+  def filterByIsNNode(iter : Iterable[Statement]) : Boolean = !iter.head.getSubject.isInstanceOf[BNode]
   /**
     *
     * @param groupFun how to group triples
@@ -108,6 +108,10 @@ object SparkUtils {
       val csvStr = SparkUtils.buildCSV(labeledNodes, schemaMap).collect()
 
       val csvHead = NodeUtils.stringSchema(schemaMap)
+
+      println("now - " + label)
+
+      println("schema is - " + csvHead)
 
       NodeUtils.writeFile(csvHead +: csvStr , append = false, "/data2/test/" , (path.split("/").reduce(_ + _) + label).replace("n3", "csv"))
     }
