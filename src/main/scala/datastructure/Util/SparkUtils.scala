@@ -1,12 +1,11 @@
 package datastructure.Util
 import java.io.{File, FileReader}
 
-import datastructure.Obj.TypeMap.B
 import datastructure.Util.NodeUtils.buildCSVPerNode
 import datastructure.{Node, NodeTreeHandler}
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-import org.eclipse.rdf4j.model.{BNode, IRI, Statement}
+import org.eclipse.rdf4j.model.{BNode, Statement}
 import org.eclipse.rdf4j.rio.{RDFFormat, Rio}
 
 import scala.collection.mutable
@@ -55,19 +54,18 @@ object SparkUtils {
     nodeIter.map(n => buildCSVPerNode(n, m))
   }
 
-  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
-    nodeArray
-      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
-      .flatMap(_.toList)
-      .map(a => (a._2, mutable.Set(a._1)))
-      .reduceByKey(_ ++ _)
-      .collect()
-  }
+//  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
+//    nodeArray
+//      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
+//      .flatMap(_.toList)
+//      .map(a => (a._2, mutable.Set(a._1)))
+//      .reduceByKey(_ ++ _)
+//      .collect()
+//  }
 
   def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
     nodeArray.map(n => n.getId -> n).collect().toMap
   }
-
   def process(path:String, sc : SparkContext, format : RDFFormat) :Unit = {
     val rdfParser = Rio.createParser(format)
     val handler = new NodeTreeHandler
@@ -80,21 +78,22 @@ object SparkUtils {
 
     val nodeRDD = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsNNode)(nodes.toList).map(i => NodeUtils.buildNodeByStatement(i))
 
-    val bnodeMap = mutable.HashMap(buildBNodePair(nodeRDD) : _*)
+//    val bnodeMap = mutable.HashMap(buildBNodePair(nodeRDD) : _*)
+//
+//    val nodeMap = buildNodeMap(nodeRDD)
+//
+//    val bnodeArray = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsBNode)(nodes.toList).flatMap(_.toList).collect()
 
-    val nodeMap = buildNodeMap(nodeRDD)
+//    val (bub, tail) : (mutable.Queue[Statement], mutable.Queue[Statement]) = NodeUtils.bNodeBiFilter(bnodeArray)
+//
+//    NodeUtils.processBUBNode(bub, nodeMap, bnodeMap)
+//
+//    NodeUtils.processBNode(tail, nodeMap, bnodeMap)
 
-    val bnodeArray = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsBNode)(nodes.toList).flatMap(_.toList).collect()
+//    val finalNodeArray = sc.parallelize(nodeMap.values.toList)
 
-    val (bub, tail) : (mutable.Queue[Statement], mutable.Queue[Statement]) = NodeUtils.bNodeBiFilter(bnodeArray)
-
-    NodeUtils.processBUBNode(bub, nodeMap, bnodeMap)
-
-    NodeUtils.processBNode(tail, nodeMap, bnodeMap)
-
-    val finalNodeArray = sc.parallelize(nodeMap.values.toList)
-
-    val labeledFinalNodeArray = finalNodeArray.map(n => (n.getLabel, n))
+    val labeledFinalNodeArray = nodeRDD
+      .map(n => (n.getLabel, n))
       .groupByKey()
       .collect()
 
@@ -105,6 +104,8 @@ object SparkUtils {
 
       val schemaMap = SparkUtils.generateSchema(labeledNodes)
 
+      println(schemaMap.keySet)
+
       val csvStr = SparkUtils.buildCSV(labeledNodes, schemaMap).collect()
 
       val csvHead = NodeUtils.stringSchema(schemaMap)
@@ -113,7 +114,14 @@ object SparkUtils {
 
       println("schema is - " + csvHead)
 
-      NodeUtils.writeFile(csvHead +: csvStr , append = false, "/data2/test/" , (path.split("/").reduce(_ + _) + label).replace("n3", "csv"))
+      val relationHead = ":START_ID,:END_ID,:TYPE"
+
+      val relationship = SparkUtils.buildNodeRelationCSV(labeledNodes).collect()
+
+      NodeUtils.writeFile(csvHead +: csvStr, append = false, "/data2/test/", (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils.writeFile(relationHead +: relationship, append = false, "/data2/test/", (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
     }
   }
+
+  def buildNodeRelationCSV(nodeArray: RDD[Node]): RDD[String] = nodeArray.map(n => n.getNodeRelation).flatMap(_.toList)
 }
