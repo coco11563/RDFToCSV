@@ -1,12 +1,11 @@
 package datastructure.Util
 import java.io.{File, FileReader}
 
-import datastructure.Obj.TypeMap.B
 import datastructure.Util.NodeUtils.buildCSVPerNode
 import datastructure.{Node, NodeTreeHandler}
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-import org.eclipse.rdf4j.model.{BNode, IRI, Statement}
+import org.eclipse.rdf4j.model.{BNode, Statement}
 import org.eclipse.rdf4j.rio.{RDFFormat, Rio}
 
 import scala.collection.mutable
@@ -67,7 +66,6 @@ object SparkUtils {
   def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
     nodeArray.map(n => n.getId -> n).collect().toMap
   }
-
   def process(path:String, sc : SparkContext, format : RDFFormat) :Unit = {
     val rdfParser = Rio.createParser(format)
     val handler = new NodeTreeHandler
@@ -116,7 +114,14 @@ object SparkUtils {
 
       println("schema is - " + csvHead)
 
-      NodeUtils.writeFile(csvHead +: csvStr , append = false, "/data2/test/" , (path.split("/").reduce(_ + _) + label).replace("n3", "csv"))
+      val relationHead = ":START_ID,:END_ID,:TYPE"
+
+      val relationship = SparkUtils.buildNodeRelationCSV(labeledNodes).collect()
+
+      NodeUtils.writeFile(csvHead +: csvStr, append = false, "/data2/test/", (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils.writeFile(relationHead +: relationship, append = false, "/data2/test/", (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
     }
   }
+
+  def buildNodeRelationCSV(nodeArray: RDD[Node]): RDD[String] = nodeArray.map(n => n.getNodeRelation).flatMap(_.toList)
 }

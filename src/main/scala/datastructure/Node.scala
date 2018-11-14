@@ -5,16 +5,17 @@ import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.vocabulary.RDF
 
 import scala.collection.mutable
-class Node(private val id : String, private var label : U) extends Serializable {
+
+class Node(private val id: String) extends Serializable {
   /**
     * constructor for UUL and UUB or relation type's UUU
     * will build a node without the label
     * @param id you know what id means
     * @return
     */
-  private def this(id : V) = this(id.stringValue(), null)
-  private def this(id : String) = this(id, null)
-  private def this(id : V, label : U) = this(id.stringValue(), label)
+  private def this(id: V) = this(id.stringValue())
+
+  private var label: String = _
 
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
 
@@ -58,6 +59,8 @@ class Node(private val id : String, private var label : U) extends Serializable 
 //  private def addBNodeRelation (predicate : String, id : U): Boolean = bNodeRelation.add((predicate, this.id, id))
 
   private def addNodeRelation (predicate : String, id : Value) : Boolean = nodeRelation.add((predicate, this.id, id.stringValue()))
+
+  def getNodeRelation: List[String] = nodeRelation.map(a => a._2 + "," + a._3 + "," + a._1).toList
 //  /**
 //    * bNode adding method for insert bNode which have a bNode precedent(form of BUB)
 //    * the predicate of this bnode will be APPENDED by their precedent
@@ -73,10 +76,10 @@ class Node(private val id : String, private var label : U) extends Serializable 
 
   private def addLabel(label : U) : Unit = {
     if (!hasLabel) {
-      this.label = label
-      secondLabels.add(label.getLocalName)
+      this.label = label.getLocalName
+      secondLabels += label.getLocalName
     }
-    else secondLabels.add(label.getLocalName)
+    else secondLabels += label.getLocalName
   }
 
 
@@ -106,8 +109,14 @@ class Node(private val id : String, private var label : U) extends Serializable 
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 
-  def getLabel : String = if (hasLabel) label.getLocalName else "NONE"
-  def getAllLabel : String = this.secondLabels.reduce(_ + ";" + _)
+  def getLabel: String = if (hasLabel) label else "NONE"
+
+  def getAllLabel: String = {
+    if (!hasLabel)
+      "NONE"
+    else
+      this.secondLabels.reduce(_ + ";" + _)
+  }
   def getPropSet : mutable.HashMap[String, Boolean] = this.propSet
   def getId : String = this.id
 }
@@ -121,8 +130,12 @@ object Node {
   def instanceOf(subject: Resource, predicate : IRI, obj : Value) : Node = (subject, predicate, obj) match {
     case (a:V, b:U, c:L) => val node = new Node(a); node.addProp(b.getLocalName, c.stringValue()); node
     case (a:V, b:U, c:U) =>
-      if (b.equals(RDF.TYPE)) //type label
-        new Node(a, c)
+      if (b.equals(RDF.TYPE)) {
+        //type label
+        val n = new Node(a)
+        n.addLabel(c)
+        n
+      }
       else {
         val n = new Node(a)
         n.addNodeRelation(b.getLocalName, c)

@@ -1,13 +1,11 @@
 package datastructure.Util
 
 import java.io.FileWriter
-import java.util
 
 import datastructure.Node
 import datastructure.Obj.TypeMap.{B, TRIPLE, U}
-import org.apache.spark.rdd.RDD
-import org.eclipse.rdf4j.model.{BNode, Statement}
-import org.eclipse.rdf4j.model.impl.{SimpleIRI, SimpleLiteral, SimpleValueFactory}
+import org.eclipse.rdf4j.model.Statement
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory
 
 import scala.collection.mutable
 
