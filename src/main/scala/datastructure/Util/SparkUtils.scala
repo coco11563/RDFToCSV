@@ -66,7 +66,8 @@ object SparkUtils {
   def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
     nodeArray.map(n => n.getId -> n).collect().toMap
   }
-  def process(path:String, sc : SparkContext, format : RDFFormat) :Unit = {
+
+  def process(path: String, sc: SparkContext, format: RDFFormat, outpath: String): Unit = {
     val rdfParser = Rio.createParser(format)
     val handler = new NodeTreeHandler
     println("done init")
@@ -118,8 +119,8 @@ object SparkUtils {
 
       val relationship = SparkUtils.buildNodeRelationCSV(labeledNodes).collect()
 
-      NodeUtils.writeFile(csvHead +: csvStr, append = false, "/data2/test/", (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
-      NodeUtils.writeFile(relationHead +: relationship, append = false, "/data2/test/", (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils.writeFile(csvHead +: csvStr, append = false, outpath, (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils.writeFile(relationHead +: relationship, append = false, outpath, (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
     }
   }
 
