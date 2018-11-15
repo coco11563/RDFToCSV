@@ -66,12 +66,18 @@ object SparkUtils {
   def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
     nodeArray.map(n => n.getId -> n).collect().toMap
   }
-  def process(path:String, sc : SparkContext, format : RDFFormat) :Unit = {
+
+  def process(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String): Unit = {
     val rdfParser = Rio.createParser(format)
     val handler = new NodeTreeHandler
     println("done init")
     rdfParser.setRDFHandler(handler)
-    rdfParser.parse(new FileReader(new File(path)), "")
+
+    for (p <- path) {
+      println(s"now we are parsing $p")
+      rdfParser.parse(new FileReader(new File(p)), "")
+    }
+
     println("done resolve")
 
     val nodes = handler.fileStatementQueue
@@ -96,8 +102,10 @@ object SparkUtils {
       .map(n => (n.getLabel, n))
       .groupByKey()
       .collect()
+    var count = 0
 
     for (nodelist <- labeledFinalNodeArray) {
+
       val label = nodelist._1
 
       val labeledNodes = sc.parallelize(nodelist._2.toList)
@@ -118,8 +126,8 @@ object SparkUtils {
 
       val relationship = SparkUtils.buildNodeRelationCSV(labeledNodes).collect()
 
-      NodeUtils.writeFile(csvHead +: csvStr, append = false, "/data2/test/", (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
-      NodeUtils.writeFile(relationHead +: relationship, append = false, "/data2/test/", (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils.writeFile(csvHead +: csvStr, append = false, outpath, (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils.writeFile(relationHead +: relationship, append = false, outpath, (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
     }
   }
 
