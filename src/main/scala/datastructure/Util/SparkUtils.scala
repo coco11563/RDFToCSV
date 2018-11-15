@@ -67,12 +67,17 @@ object SparkUtils {
     nodeArray.map(n => n.getId -> n).collect().toMap
   }
 
-  def process(path: String, sc: SparkContext, format: RDFFormat, outpath: String): Unit = {
+  def process(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String): Unit = {
     val rdfParser = Rio.createParser(format)
     val handler = new NodeTreeHandler
     println("done init")
     rdfParser.setRDFHandler(handler)
-    rdfParser.parse(new FileReader(new File(path)), "")
+
+    for (p <- path) {
+      println(s"now we are parsing $p")
+      rdfParser.parse(new FileReader(new File(p)), "")
+    }
+
     println("done resolve")
 
     val nodes = handler.fileStatementQueue
@@ -97,8 +102,10 @@ object SparkUtils {
       .map(n => (n.getLabel, n))
       .groupByKey()
       .collect()
+    var count = 0
 
     for (nodelist <- labeledFinalNodeArray) {
+
       val label = nodelist._1
 
       val labeledNodes = sc.parallelize(nodelist._2.toList)

@@ -16,12 +16,15 @@ object Main {
       .set("spark.driver.maxResultSize", "4g")
     val sc = new SparkContext(sparkConf)
 
-    val fileList = Neo4jUtils.ls(new File(args(0)), new mutable.HashSet[String]()).filter(s => {
+    var fileList = Neo4jUtils.ls(new File(args(0)), new mutable.HashSet[String]()).filter(s => {
       s.contains(".n3")
     }).toList
-    for (f <- fileList) {
-      SparkUtils.process(f, sc, RDFFormat.N3, "/data2/test/")
+    while (fileList != Nil) {
+      val c = fileList.splitAt(Integer.parseInt(args(1)))
+      fileList = c._2
+      SparkUtils.process(c._1, sc, RDFFormat.N3, "/data2/test/")
     }
+
 
     val script = Neo4jUtils.buildImportScript(Neo4jUtils.ls(new File("/data2/test"), new mutable.HashSet[String]()).filter(_.contains("_ent_")).toList,
       Neo4jUtils.ls(new File("/data2/test"), new mutable.HashSet[String]()).filter(_.contains("_rel_")).toList,
