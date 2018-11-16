@@ -24,6 +24,29 @@ object Neo4jUtils {
     resultFileName
   }
 
+  def getRightPerCut(list: List[String], amount: Long): Int = {
+    var list_ = list
+    var fileNum = 0l
+    var count = 0
+    var flag = true
+    while (list_.nonEmpty && fileNum < amount) {
+      fileNum += getFileSize(list_.head)
+      count += 1
+      list_ = list_.tail
+    }
+    println(s"本次处理文件大小 $fileNum MB, 共处理 $count 个文件")
+    count
+  }
+
+  def getFileSize(fileName: String): Long = getFileSize(new File(fileName))
+
+  def getFileSize(file: File): Long = {
+    if (file.exists && file.isFile) {
+      val fileName = file.getName
+      System.out.println("文件" + fileName + "的大小是：" + file.length)
+    }
+    file.length() / (1024 * 1024)
+  }
   def main(args: Array[String]): Unit = {
     //    val li = ls("C:\\Users\\NickXin\\OneDrive\\Doc\\scala\\SeqN3CSVProcessor\\src\\main\\scala\\datastructure", recursive = true, "(\\w+)[4]{1}(\\w+).scala")
     //    println(buildImportScript(li,li,"test"))

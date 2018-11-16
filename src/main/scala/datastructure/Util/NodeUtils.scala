@@ -1,6 +1,6 @@
 package datastructure.Util
 
-import java.io.FileWriter
+import java.io.{File, FileWriter}
 
 import datastructure.Node
 import datastructure.Obj.TypeMap.{B, TRIPLE, U}
@@ -115,6 +115,8 @@ object NodeUtils {
   }
 
   def writeFile(ls : Array[String], append : Boolean, outputPath : String, outputName : String) : Unit = {
+    val f: File = new File(outputPath)
+    if (!f.exists()) f.mkdirs()
     val out = new FileWriter(outputPath + outputName,append)
     for (i <- ls) out.write(i + "\r\n")
     out.close()
