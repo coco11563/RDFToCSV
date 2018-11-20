@@ -39,36 +39,9 @@ object SparkUtils {
     q
   }
 
-  def generateSchema(nodes : RDD[Node]) : mutable.Map[String, Boolean] = {
-    nodes.map(n => n.getPropSet).reduce((a,b) => {
-      val set = a.keySet
-      for (s <- set) {
-        if (b.contains(s) && !b(s) && a(s)) b.update(s, true)
-        else b.put(s, a(s))
-      }
-      b
-    })
-  }
-
-  def buildCSV(nodeIter : RDD[Node], m :  mutable.Map[String, Boolean]) : RDD[String] = {
-    nodeIter.map(n => buildCSVPerNode(n, m))
-  }
-
-//  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
-//    nodeArray
-//      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
-//      .flatMap(_.toList)
-//      .map(a => (a._2, mutable.Set(a._1)))
-//      .reduceByKey(_ ++ _)
-//      .collect()
-//  }
-
-  def buildNodeMap(nodeArray : RDD[Node]) : Map[String, Node] = {
-    nodeArray.map(n => n.getId -> n).collect().toMap
-  }
-
-  def process(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String): Unit = {
+  def process(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String, index: Int): Unit = {
     val rdfParser = Rio.createParser(format)
+
     val handler = new NodeTreeHandler
     println("done init")
     rdfParser.setRDFHandler(handler)
@@ -82,7 +55,9 @@ object SparkUtils {
 
     val nodes = handler.fileStatementQueue
 
-    val nodeRDD = SparkUtils.groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsNNode)(nodes.toList).map(i => NodeUtils.buildNodeByStatement(i))
+    val nodeRDD = SparkUtils
+      .groupBuildTriples(SparkUtils.groupById(sc))(SparkUtils.filterByIsNNode)(nodes.toList)
+      .map(i => NodeUtils.buildNodeByStatement(i))
 
 //    val bnodeMap = mutable.HashMap(buildBNodePair(nodeRDD) : _*)
 //
@@ -102,33 +77,73 @@ object SparkUtils {
       .map(n => (n.getLabel, n))
       .groupByKey()
       .collect()
+
     var count = 0
 
     for (nodelist <- labeledFinalNodeArray) {
 
-      val label = nodelist._1
+      val label = sc.broadcast[String](nodelist._1)
 
-      val labeledNodes = sc.parallelize(nodelist._2.toList)
+      val labeledNodes: Iterable[Node] = nodelist._2
 
-      val schemaMap = SparkUtils.generateSchema(labeledNodes)
+      val labeledNode = sc.parallelize(labeledNodes.toList)
 
-      println(schemaMap.keySet)
+      val schemaMap = sc.broadcast[mutable.Map[String, Boolean]](SparkUtils.generateSchema(labeledNode))
 
-      val csvStr = SparkUtils.buildCSV(labeledNodes, schemaMap).collect()
+      println(schemaMap.value.keySet)
 
-      val csvHead = NodeUtils.stringSchema(schemaMap)
+      val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
 
-      println("now - " + label)
+      val csvHead = NodeUtils.stringSchema(schemaMap.value)
+
+      println("now - " + label.value)
 
       println("schema is - " + csvHead)
 
+      NodeUtils
+        .writeFile(csvHead +: csvStr,
+          append = false,
+          outpath + s"$index/",
+          label.value + "_ent_.csv")
+
       val relationHead = ":START_ID,:END_ID,:TYPE"
 
-      val relationship = SparkUtils.buildNodeRelationCSV(labeledNodes).collect()
+      val relationship = SparkUtils.buildNodeRelationCSV(labeledNode).collect()
 
-      NodeUtils.writeFile(csvHead +: csvStr, append = false, outpath, (label + "_ent_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
-      NodeUtils.writeFile(relationHead +: relationship, append = false, outpath, (label + "_rel_" + path.split("/").reduce(_ + _)).replace("n3", "csv"))
+      NodeUtils
+        .writeFile(relationHead +: relationship,
+          append = false,
+          outpath + s"$index/",
+          label.value + "_rel_.csv")
     }
+  }
+
+  def buildCSV(nodeIter: RDD[Node], m: mutable.Map[String, Boolean]): RDD[String] = {
+    nodeIter.map(n => buildCSVPerNode(n, m))
+  }
+
+  //  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {
+  //    nodeArray
+  //      .map(a => a.getBNodeMap.keySet.map((a.getId, _)))
+  //      .flatMap(_.toList)
+  //      .map(a => (a._2, mutable.Set(a._1)))
+  //      .reduceByKey(_ ++ _)
+  //      .collect()
+  //  }
+
+  def buildNodeMap(nodeArray: RDD[Node]): Map[String, Node] = {
+    nodeArray.map(n => n.getId -> n).collect().toMap
+  }
+
+  def generateSchema(nodes: RDD[Node]): mutable.Map[String, Boolean] = {
+    nodes.map(n => n.getPropSet).reduce((a, b) => {
+      val set = a.keySet
+      for (s <- set) {
+        if (b.contains(s) && !b(s) && a(s)) b.update(s, true)
+        else if (!b.contains(s)) b.put(s, a(s))
+      }
+      b
+    })
   }
 
   def buildNodeRelationCSV(nodeArray: RDD[Node]): RDD[String] = nodeArray.map(n => n.getNodeRelation).flatMap(_.toList)
