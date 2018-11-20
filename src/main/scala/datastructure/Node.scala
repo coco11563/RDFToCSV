@@ -43,6 +43,10 @@ class Node(private val id: String) extends Serializable {
     }
   }
 
+  override def toString: String = {
+    s"$id : $label , $properties"
+  }
+
 //  /**
 //    * @param bNode inserted bNode
 //    * @param predicate the bNode statement's predicate

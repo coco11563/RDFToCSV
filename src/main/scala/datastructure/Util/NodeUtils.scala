@@ -51,6 +51,51 @@ object NodeUtils {
     string.reduce(_ + "," + _)
   }
 
+  //reduce left is empty
+  def buildCSVPerNodeMayEmpty(node: Node, schema: mutable.Map[String, Boolean]): String = {
+    if (schema.keySet.isEmpty) node.getId + "," + node.getAllLabel
+    else buildCSVPerNode(node, schema)
+  }
+
+  def main(args: Array[String]): Unit = {
+    val vf = SimpleValueFactory.getInstance()
+    var c = Array((vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate1"), vf.createLiteral("lit1")),
+      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"), vf.createLiteral("lit2")),
+      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"), vf.createLiteral("lit4")),
+      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate3"), vf.createLiteral("lit3")),
+      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.18")),
+      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createBNode("_:fuckyouannomynousnode")),
+      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/EnzymeNode")),
+      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/NameNode"))
+    )
+    var n = buildNode(c.toIterable)
+
+    val s = buildCSVPerNode(n, mutable.Map("substrate2" -> true, "test" -> false, "dopeArray" -> true, "dopeArray2" -> false))
+    println(n.getLabel)
+    println(n.toString)
+    println(s)
+  }
+
+  def buildNode(iter: Iterable[TRIPLE]): Node = {
+    var n: Node = null
+    for (triple <- iter) {
+      if (n == null)
+        n = Node.instanceOf(triple._1, triple._2, triple._3)
+      else n.handle(triple._1, triple._2, triple._3)
+    }
+    n
+  }
+
+  def buildNodeByStatement(iter: Iterable[Statement]): Node = {
+    var n: Node = null
+    for (triple <- iter) {
+      if (n == null)
+        n = Node.build(triple)
+      else n.handle(triple)
+    }
+    n
+  }
+
   def buildCSVPerNode(node: Node, schema : mutable.Map[String, Boolean]) : String = {
     val array = new mutable.ArrayBuffer[String]()
     for (key <- schema.keySet) {
@@ -62,46 +107,17 @@ object NodeUtils {
         else set.head
       array += str
     }
-    val ret = array.reduce(_ + "," + _)
+    val ret = try {
+      array.reduce(_ + "," + _)
+    } catch {
+      case e: UnsupportedOperationException =>
+        println(node.toString)
+        throw e
+      case e: Exception =>
+        println(e.getMessage)
+        throw e
+    }
     node.getId + s",$ret," + node.getAllLabel
-  }
-
-  def buildNode(iter : Iterable[TRIPLE]) : Node = {
-    var n : Node = null
-    for (triple <- iter) {
-      if (n == null)
-        n = Node.instanceOf(triple._1, triple._2, triple._3)
-      else n.handle(triple._1, triple._2, triple._3)
-    }
-    n
-  }
-
-  def buildNodeByStatement(iter : Iterable[Statement]) : Node = {
-    var n : Node = null
-    for (triple <- iter) {
-      if (n == null)
-        n = Node.build(triple)
-      else n.handle(triple)
-    }
-    n
-  }
-  def main(args: Array[String]): Unit = {
-    val vf = SimpleValueFactory.getInstance()
-    var c = Array((vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate1"),  vf.createLiteral("lit1")),
-        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"),  vf.createLiteral("lit2")),
-        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"),  vf.createLiteral("lit4")),
-//        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate3"), vf.createLiteral("lit3")),
-//        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.18")),
-//        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createBNode("_:fuckyouannomynousnode")),
-      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/EnzymeNode")),
-        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/NameNode"))
-    )
-    var n = buildNode(c.toIterable)
-
-    val s = buildCSVPerNode(n, mutable.Map("substrate2" -> true, "test" -> false, "dopeArray" -> true, "dopeArray2" -> false))
-    println(n.getLabel)
-
-    println(s)
   }
 
   def bNodeBiFilter(nodeArray : Array[Statement]) : (mutable.Queue[Statement], mutable.Queue[Statement]) = {

@@ -29,17 +29,17 @@ object Main {
     val fileAmount = fileList.size
     var index = 0
 
-
     while (fileList != Nil) {
-      val filePers = Neo4jUtils.getRightPerCut(fileList, 1000) //for exe 16g dri 32g -> 3000MB
+      val filePers = Neo4jUtils.getRightPerCut(fileList, 1000) //for exe 16g dri 32g -> 1000MB
       println(s"本次处理文件数 = $filePers")
       val c = fileList.splitAt(filePers)
       fileList = c._2
       println("*********************************************************")
       println(s"**************正在进行第${index + 1} 次处理*********************")
       println(s"**************目前处理情况: ${(index + 1) * filePers}/$fileAmount *********************")
+      println(s"**************还需要时间: ${fileAmount / (fileAmount - (index + 1) * filePers)}/ *********************")
       println("*********************************************************")
-      SparkUtils.process(c._1, sc, RDFFormat.N3, "/data2/test/", index)
+      SparkUtils.process(c._1, sc, RDFFormat.N3, args(1), index)
       println("*********************************************************")
       println(s"**************已经完成第${index + 1} 次处理*********************")
       println(s"**************目前剩余处理情况: ${fileList.size}/$fileAmount *********************")
