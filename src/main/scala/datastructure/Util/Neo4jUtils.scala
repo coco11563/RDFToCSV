@@ -5,10 +5,10 @@ import java.io.File
 import scala.collection.mutable
 
 object Neo4jUtils {
-  def buildImportScript(csvEntityPath: List[String], csvRelPath: List[String], dbName: String): String = {
+  def buildImportScript(csvEntityPath: List[String], csvRelPath: List[String], dbName: String, outpath: String): String = {
     val ent = csvEntityPath.map("--nodes " + _).reduce(_ + " " + _)
     val rel = "--relationships " + csvRelPath.reduce(_ + "," + _)
-    s"neo4j-import --into $dbName $ent $rel --id-type string --ignore-empty-string true --bad-tolerance true --high-io --max-memory=100G "
+    s"neo4j-import --into ${outpath + dbName} $ent $rel --id-type string --ignore-empty-string true --bad-tolerance true --high-io --max-memory=100G --skip-duplicate-nodes true --processors 64 "
   }
 
   def ls(file: File, resultFileName: mutable.HashSet[String]): mutable.HashSet[String] = {

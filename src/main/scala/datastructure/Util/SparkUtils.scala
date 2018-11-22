@@ -1,7 +1,7 @@
 package datastructure.Util
 import java.io.{File, FileReader}
 
-import datastructure.Util.NodeUtils.buildCSVPerNode
+import datastructure.Util.NodeUtils.buildCSVPerNodeMayEmpty
 import datastructure.{Node, NodeTreeHandler}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -119,7 +119,7 @@ object SparkUtils {
   }
 
   def buildCSV(nodeIter: RDD[Node], m: mutable.Map[String, Boolean]): RDD[String] = {
-    nodeIter.map(n => buildCSVPerNode(n, m))
+    nodeIter.map(n => buildCSVPerNodeMayEmpty(n, m))
   }
 
   //  def buildBNodePair(nodeArray : RDD[Node]) : Array[(B, mutable.Set[String])] = {

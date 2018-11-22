@@ -30,15 +30,16 @@ class Node(private val id: String) extends Serializable {
   val propSet : mutable.HashMap[String, Boolean] = new mutable.HashMap[String, Boolean]()
 
   private def addProp(iri: String, lit : String) : Unit = {
+    val literal = lit.replaceAll("\"", " ").replaceAll("\'", " ")
     if (properties.contains(iri)) {
       val s = properties(iri)
-      if (!s.contains(lit)){
-        s.add(lit)
+      if (!s.contains(literal)) {
+        s.add(literal)
         propSet.update(iri, true)
       }
     }
     else {
-      properties.put(iri, mutable.HashSet(lit))
+      properties.put(iri, mutable.HashSet(literal))
       propSet.put(iri, false)
     }
   }
