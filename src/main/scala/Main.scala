@@ -1,6 +1,6 @@
 import java.io.File
 
-import datastructure.Util.{FileUtils, Neo4jUtils, NodeUtils, SparkUtils}
+import datastructure.Util.{Neo4jUtils, NodeUtils, SparkUtils}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.eclipse.rdf4j.rio.RDFFormat
 
@@ -18,20 +18,19 @@ object Main {
         .set("spark.default.parallelism", "32")
       //      .set("spark.serializer","org.apache.spark.serializer.KryoSerializer")
       //      .registerKryoClasses(new Class[]{CategorySortKey.class})
-
-
       val sc = new SparkContext(sparkConf)
 
       var fileList = Neo4jUtils.ls(new File(args(0)), new mutable.HashSet[String]()).filter(s => {
         s.contains(".n3")
       }).toList
 
-      println("  isData method should be carefully used\r\n  * this used generic linux shell command\n    *\n    * should be careful to use\n    *\n    * base on centOS7.5 test pass")
-      var dataList = fileList.filter(a => FileUtils.isData(a)).toArray
-      println("  isData method should be carefully used\r\n  * this used generic linux shell command\n    *\n    * should be careful to use\n    *\n    * base on centOS7.5 test pass")
-      var validList = fileList.filter(a => !FileUtils.isData(a))
-
-      NodeUtils.writeFile(dataList, false, args(1), "binaryFile")
+      //      println("  isData method should be carefully used\r\n  * this used generic linux shell command\n    *\n    * should be careful to use\n    *\n    * base on centOS7.5 test pass")
+      //      var dataList = fileList.filter(a => FileUtils.isData(a)).toArray
+      //      println("  isData method should be carefully used\r\n  * this used generic linux shell command\n    *\n    * should be careful to use\n    *\n    * base on centOS7.5 test pass")
+      //      var validList = fileList.filter(a => !FileUtils.isData(a))
+      println("uniprot contain some corrupt file, in the beta version, we use filter to ignore these files")
+      var validList = fileList
+      //      NodeUtils.writeFile(dataList, false, args(1), "binaryFile")
 
 
       val fileAmount = validList.size

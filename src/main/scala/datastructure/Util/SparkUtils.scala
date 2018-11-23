@@ -6,7 +6,7 @@ import datastructure.{Node, NodeTreeHandler}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.eclipse.rdf4j.model.{BNode, Statement}
-import org.eclipse.rdf4j.rio.{RDFFormat, Rio}
+import org.eclipse.rdf4j.rio.{RDFFormat, RDFParseException, Rio}
 
 import scala.collection.mutable
 object SparkUtils {
@@ -40,6 +40,7 @@ object SparkUtils {
   }
 
   def process(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String, index: Int): Unit = {
+    var corruptFilePath = new mutable.ArrayBuffer[String]
     val rdfParser = Rio.createParser(format)
 
     val handler = new NodeTreeHandler
@@ -48,7 +49,16 @@ object SparkUtils {
 
     for (p <- path) {
       println(s"now we are parsing $p")
-      rdfParser.parse(new FileReader(new File(p)), "")
+      try {
+        rdfParser.parse(new FileReader(new File(p)), "")
+      }
+      catch {
+        case e: RDFParseException => println(p + "is a corrupt file"); corruptFilePath :+= (p + "is a corrupt file"); corruptFilePath :+= p; corruptFilePath :+= e.getMessage
+
+        case e: Exception => println(p + "get other exception"); corruptFilePath :+= (p + "get other exception"); corruptFilePath :+= p; corruptFilePath :+= e.getMessage
+
+        case _ => println("??? happened")
+      }
     }
 
     println("done resolve")
@@ -115,6 +125,9 @@ object SparkUtils {
           append = false,
           outpath + s"$index/",
           label.value + "_rel_.csv")
+
+      NodeUtils.writeFile(corruptFilePath.toArray, append = true,
+        outpath + "corruptFile/", "log.txt")
     }
   }
 
