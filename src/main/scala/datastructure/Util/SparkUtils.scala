@@ -128,7 +128,8 @@ object SparkUtils {
       println(s"now we are parsing $p")
       emptyRdd = emptyRdd union parseN3(p, sc, corruptFilePath)
     }
-    val nodeRDD: RDD[Node] = groupBuildTriples(groupByIdRDD(sc): RDD[Statement] => RDD[Iterable[Statement]])(filterByIsNNode)(emptyRdd)
+    //handle all node as nnode
+    val nodeRDD: RDD[Node] = groupBuildTriples(groupByIdRDD(sc): RDD[Statement] => RDD[Iterable[Statement]])(_ => true)(emptyRdd)
       .map(i => NodeUtils.buildNodeByStatement(i))
 
     val labeledFinalNodeArray = nodeRDD
