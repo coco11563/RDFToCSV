@@ -60,7 +60,6 @@ object SparkUtils {
         case _ => println("??? happened")
       }
     }
-
     println("done resolve")
 
     val nodes = handler.fileStatementQueue

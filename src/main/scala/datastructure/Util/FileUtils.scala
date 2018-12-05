@@ -21,6 +21,7 @@ object FileUtils {
     * @param s the file path
     * @return is this path is an binary data file
     */
+  @Deprecated
   def isData(s: String): Boolean = {
     val ret: Stream[String] = s"file $s" lineStream_!
     val rep = ret.toList.head
