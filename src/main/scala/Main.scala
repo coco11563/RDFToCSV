@@ -46,7 +46,7 @@ object Main {
         println(s"**************目前处理情况: ${(index + 1) * filePers}/$fileAmount *********************")
         println(s"**************还需要时间: ${fileAmount / (fileAmount - (index + 1) * filePers)}/ *********************")
         println("*********************************************************")
-        SparkUtils.process(c._1, sc, RDFFormat.N3, args(1), index)
+        SparkUtils.processParseBySpark(c._1, sc, RDFFormat.N3, args(1), index)
         println("*********************************************************")
         println(s"**************已经完成第${index + 1} 次处理*********************")
         println(s"**************目前剩余处理情况: ${validList.size}/$fileAmount *********************")
