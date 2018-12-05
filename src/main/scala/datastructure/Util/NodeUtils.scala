@@ -1,17 +1,41 @@
 package datastructure.Util
 
-import java.io.{File, FileWriter}
+import java.io.{File, FileWriter, StringReader}
 
-import datastructure.Node
 import datastructure.Obj.TypeMap.{B, TRIPLE, U}
+import datastructure.{Node, SimpleStatementHandler}
+import org.apache.commons.io.input.ReaderInputStream
 import org.eclipse.rdf4j.model.Statement
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory
+import org.eclipse.rdf4j.rio.{RDFFormat, RDFParseException, Rio}
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 
-
+//0^A7cajl#Z
 object NodeUtils {
+  def main(args: Array[String]): Unit = {
+    //    val vf = SimpleValueFactory.getInstance()
+    //    var c = Array((vf.createIRI("<http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17>"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate1"), vf.createLiteral("lit1")),
+    //      (vf.createIRI("<http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17>"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"), vf.createLiteral("lit2")),
+    //      (vf.createIRI("<http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17>"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"), vf.createLiteral("lit4")),
+    //      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate3"), vf.createLiteral("lit3")),
+    //      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.18")),
+    //      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createBNode("_:fuckyouannomynousnode")),
+    //      (vf.createIRI("<http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17>"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/EnzymeNode")),
+    //      (vf.createIRI("<http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17>"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/NameNode"))
+    //    )
+    //    var n = buildNode(c.toIterable)
+    //
+    //    val s = buildCSVPerNode(n, mutable.Map("substrate2" -> true, "test" -> false, "dopeArray" -> true, "dopeArray2" -> false))
+    //    println(n.getLabel)
+    //    println(n.toString)
+    //    println(s)
+
+    val stmt = toStatementWithNoDirective(SparkUtils.parseCleanQuota("<http://gcm.wdcm.org/data/gcmAnnotation/protein/B9KXQ1_THERP> <http://gcm.wdcm.org/ontology/gcmAnnotation/v1/function> \"Required for rescue of stalled ribosomes mediated by trans-translation. Binds to transfer-messenger RNA (tmRNA), required for stable association of tmRNA with ribosomes. tmRNA and SmpB together mimic tRNA shape, replacing the anticodon stem-loop with SmpB. tmRNA is encoded by the ssrA gene; the 2 termini fold to resemble tRNA(Ala) and it encodes a \"tag peptide\", a short internal open reading frame. During trans-translation Ala- aminoacylated tmRNA acts like a tRNA, entering the A-site of stalled ribosomes, displacing the stalled mRNA. The ribosome then switches to translate the ORF on the tmRNA; the nascent peptide is terminated with the \"tag peptide\" encoded by the tmRNA and targeted for degradation. The ribosome is freed to recommence translation, which seems to be the essential function of trans- translation. {ECO:0000256|HAMAP-Rule:MF_00023}. Required for rescue of stalled ribosomes mediated by trans-translation. Binds to transfer-messenger RNA (tmRNA), required for stable association of tmRNA with ribosomes. tmRNA and SmpB together mimic tRNA shape, replacing the anticodon stem-loop with SmpB. tmRNA is encoded by the ssrA gene; the 2 termini fold to resemble tRNA(Ala) and it encodes a 'tag peptide', a short internal open reading frame. During trans-translation Ala- aminoacylated tmRNA acts like a tRNA, entering the A-site of stalled ribosomes, displacing the stalled mRNA. The ribosome then switches to translate the ORF on the tmRNA; the nascent peptide is terminated with the 'tag peptide' encoded by the tmRNA and targeted for degradation. The ribosome is freed to recommence translation, which seems to be the essential function of trans- translation. {ECO:0000256|SAAS:SAAS00308991}.\" .", "\'"), new ArrayBuffer[String]())
+    println(stmt)
+  }
+
 
   def buildLabelNodeMap(nodeIter : Iterator[Node]) : mutable.HashMap[String, mutable.HashSet[Node]] = {
     val map = new mutable.HashMap[String, mutable.HashSet[Node]]()
@@ -57,23 +81,16 @@ object NodeUtils {
     else buildCSVPerNode(node, schema)
   }
 
-  def main(args: Array[String]): Unit = {
-    val vf = SimpleValueFactory.getInstance()
-    var c = Array((vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate1"), vf.createLiteral("lit1")),
-      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"), vf.createLiteral("lit2")),
-      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate2"), vf.createLiteral("lit4")),
-      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/substrate3"), vf.createLiteral("lit3")),
-      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.18")),
-      //        (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/x-pathway"), vf.createBNode("_:fuckyouannomynousnode")),
-      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/EnzymeNode")),
-      (vf.createIRI("http://gcm.wdcm.org/data/gcmAnnotation1/enzyme/1.5.1.17"), vf.createIRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), vf.createIRI("http://gcm.wdcm.org/ontology/gcmAnnotation/v1/NameNode"))
-    )
-    var n = buildNode(c.toIterable)
-
-    val s = buildCSVPerNode(n, mutable.Map("substrate2" -> true, "test" -> false, "dopeArray" -> true, "dopeArray2" -> false))
-    println(n.getLabel)
-    println(n.toString)
-    println(s)
+  def toStatementWithNoDirective(str: String, log: mutable.ArrayBuffer[String]): Statement = {
+    val parser = Rio.createParser(RDFFormat.N3)
+    val simpleStatementHandler = new SimpleStatementHandler
+    parser.setRDFHandler(simpleStatementHandler)
+    try {
+      parser.parse(new ReaderInputStream(new StringReader(str), java.nio.charset.Charset.defaultCharset()), "")
+    } catch {
+      case e: RDFParseException => println(str + "got a wrong format"); log +: (str + "got a wrong format"); log :+ e.getMessage
+    }
+    simpleStatementHandler.statement
   }
 
   def buildNode(iter: Iterable[TRIPLE]): Node = {
@@ -185,4 +202,5 @@ object NodeUtils {
       counter += 1
     }
   }
+
 }
