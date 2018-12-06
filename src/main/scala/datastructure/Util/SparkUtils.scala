@@ -2,6 +2,7 @@ package datastructure.Util
 import java.io.{File, FileReader}
 import java.util.regex.Pattern
 
+import datastructure.Obj.FileSeparateIterator
 import datastructure.Util.NodeUtils.buildCSVPerNodeMayEmpty
 import datastructure.{Node, NodeTreeHandler}
 import org.apache.spark.SparkContext
@@ -161,62 +162,45 @@ object SparkUtils {
 
   def processParseBySpark(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String, index: Int): Unit = {
     var corruptFilePath = new mutable.ArrayBuffer[String]
-    var emptyRdd = sc.emptyRDD[Statement]
-    var size : Long = 0l
-    for (p <- path) {
-      println(s"now we are parsing $p")
-      size += Neo4jUtils.getFileSize(p)
-      emptyRdd = emptyRdd union parseN3(p, sc, corruptFilePath)
-    }
-    var partitionNum = size / (1024 * 1024 * 1024)
-    if (partitionNum < 1)  partitionNum += 1
-    //handle all node as nnode
-    val nodeRDD: RDD[Node] = groupBuildTriples(groupByIdRDD(sc): RDD[Statement] => RDD[Iterable[Statement]])(_ => true)(emptyRdd)
-      .map(i => NodeUtils.buildNodeByStatement(i)).filter(_.hasLabel)//  remove the none label
-    val split : Seq[RDD[Node]] = splitSampleMux(nodeRDD, partitionNum.toInt)
-    var index_ : Int = 0
-    for (nodeRDD_ <- split) {
-      val labeledFinalNodeArray = nodeRDD_
+    val files = path
+      .map(new File(_))
+    var iter = new FileSeparateIterator(files, 1024 * 1024 * 1024)
+    var count = 0
+    for (p <- iter) {
+      println(s"now we are parsing $count")
+      count += 1
+      val n3RDD = parseN3(p, sc, corruptFilePath)
+      //handle all node as nnode
+      val nodeRDD: RDD[Node] = groupBuildTriples(groupByIdRDD(sc): RDD[Statement] => RDD[Iterable[Statement]])(_ => true)(n3RDD)
+        .map(i => NodeUtils.buildNodeByStatement(i))
+      var index_ : Int = 0
+      val labeledFinalNodeArray = nodeRDD
         .map(n => (n.getLabel, n))
         .groupByKey()
         .collect()
-
       for (nodelist <- labeledFinalNodeArray) {
-
         val label = sc.broadcast[String](nodelist._1)
-
         val labeledNodes: Iterable[Node] = nodelist._2
-
         val labeledNode = sc.parallelize(labeledNodes.toList)
-
+        val hasLabeledNode = labeledNode.filter(_.hasLabel)
         val schemaMap = sc.broadcast[mutable.Map[String, Boolean]](SparkUtils.generateSchema(labeledNode))
-
         println(schemaMap.value.keySet)
-
-        val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
-
+        val csvStr = SparkUtils.buildCSV(hasLabeledNode, schemaMap.value).collect()
         val csvHead = NodeUtils.stringSchema(schemaMap.value)
-
         println("now - " + label.value)
-
         println("schema is - " + csvHead)
-
         NodeUtils
           .writeFile(csvHead +: csvStr,
             append = false,
             outpath + s"$index/",
             label.value + s"${index_}_ent_.csv")
-
         val relationHead = ":START_ID,:END_ID,:TYPE"
-
         val relationship = SparkUtils.buildNodeRelationCSV(labeledNode).collect()
-
         NodeUtils
           .writeFile(relationHead +: relationship,
             append = false,
             outpath + s"$index/",
             label.value + s"${index_}_rel_.csv")
-
         NodeUtils.writeFile(corruptFilePath.toArray, append = true,
           outpath + "corruptFile/", "log.txt")
         index_ += 1
@@ -284,6 +268,12 @@ object SparkUtils {
     n3rdd.map(NodeUtils.toStatementWithNoDirective(_, log))
   }
 
+  def parseN3(localFile: Array[String], sc: SparkContext,
+              log: mutable.ArrayBuffer[String]): RDD[Statement] = {
+    val n3rdd: RDD[String] = sc.parallelize(localFile).map(parseCleanQuota(_, "\'"))
+    //    println("we now parsing the rdf n3 file : count is " + n3rdd.count)
+    n3rdd.map(NodeUtils.toStatementWithNoDirective(_, log))
+  }
   def parseCleanQuota(str: String, replacement: CharSequence): String = {
     val mat = Pattern.compile("\"(.*)\"").matcher(str)
     val rep = if (mat.find()) mat.group(1) else ""

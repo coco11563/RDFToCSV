@@ -39,6 +39,7 @@ object Neo4jUtils {
   }
 
   def getFileSize(fileName: String): Long = getFileSize(new File(fileName))
+
   def getFileSize(file: File): Long = {
     if (file.exists && file.isFile) {
       val fileName = file.getName
