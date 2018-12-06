@@ -160,13 +160,15 @@ object SparkUtils {
     Vector.tabulate(n) { j => mux.mapPartitions { itr => itr.next()(j).toIterator } }
   }
 
-  def processParseBySpark(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String, index: Int): Unit = {
+  def processParseBySpark(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String): Unit = {
     var corruptFilePath = new mutable.ArrayBuffer[String]
+    var index = 0
     val files = path
       .map(new File(_))
     var iter = new FileSeparateIterator(files, 1024 * 1024 * 1024)
     var count = 0
     for (p <- iter) {
+      index += 1
       println(s"now we are parsing $count")
       count += 1
       val n3RDD = parseN3(p, sc, corruptFilePath)

@@ -35,7 +35,7 @@ class FileSeparateIterator(file: List[File], split: Int) extends Iterator[Array[
   override def next(): Array[String] = {
     curRead = 0
     var currentArrayBuffer = new ArrayBuffer[String]()
-    if (!inited) throw new Exception("Haven't init this iterator, should run init first")
+    if (!inited) init()
     var lst: String = ""
     while (hasNext && curRead < eachTimeRead) {
       if (!thisFileHasNext) nextFile()
@@ -82,12 +82,12 @@ class FileSeparateIterator(file: List[File], split: Int) extends Iterator[Array[
   }
 
   override def hasNext: Boolean = {
-    if (!inited) throw new Exception("Haven't init this iterator, should run init first")
+    if (!inited) init()
     curr < lineNums || filelist != Nil
   }
 
   def thisFileHasNext: Boolean = {
-    if (!inited) throw new Exception("Haven't init this iterator, should run init first")
+    if (!inited) init()
     curr < lineNums
   }
 }

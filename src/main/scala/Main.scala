@@ -23,36 +23,38 @@ object Main {
       var fileList = Neo4jUtils.ls(new File(args(0)), new mutable.HashSet[String]()).filter(s => {
         s.contains(".n3")
       }).toList
-
+      if (fileList.nonEmpty)
+        SparkUtils.processParseBySpark(fileList, sc, RDFFormat.N3, args(1))
       //      println("  isData method should be carefully used\r\n  * this used generic linux shell command\n    *\n    * should be careful to use\n    *\n    * base on centOS7.5 test pass")
       //      var dataList = fileList.filter(a => FileUtils.isData(a)).toArray
       //      println("  isData method should be carefully used\r\n  * this used generic linux shell command\n    *\n    * should be careful to use\n    *\n    * base on centOS7.5 test pass")
       //      var validList = fileList.filter(a => !FileUtils.isData(a))
-      println("uniprot contain some corrupt file, in the beta version, we use filter to ignore these files")
-      var validList = fileList
-      //      NodeUtils.writeFile(dataList, false, args(1), "binaryFile")
-
-
-      val fileAmount = validList.size
-      var index = 0
-
-      while (validList != Nil) {
-        val filePers = Neo4jUtils.getRightPerCut(validList, 1000) //for exe 16g dri 32g -> 1000MB
-        println(s"本次处理文件数 = $filePers")
-        val c = validList.splitAt(filePers)
-        validList = c._2
-        println("*********************************************************")
-        println(s"**************正在进行第${index + 1} 次处理*********************")
-        println(s"**************目前处理情况: ${(index + 1) * filePers}/$fileAmount *********************")
-        println(s"**************还需要时间: ${fileAmount / (fileAmount - (index + 1) * filePers)}/ *********************")
-        println("*********************************************************")
-        SparkUtils.processParseBySpark(c._1, sc, RDFFormat.N3, args(1), index)
-        println("*********************************************************")
-        println(s"**************已经完成第${index + 1} 次处理*********************")
-        println(s"**************目前剩余处理情况: ${validList.size}/$fileAmount *********************")
-        println("*********************************************************")
-        index += 1
-      }
+      //      println("uniprot contain some corrupt file, in the beta version, we use filter to ignore these files")
+      //      var validList = fileList
+      //      //      NodeUtils.writeFile(dataList, false, args(1), "binaryFile")
+      //
+      //
+      //      val fileAmount = validList.size
+      //      var index = 0
+      //
+      //      while (validList != Nil) {
+      //        val filePers = Neo4jUtils.getRightPerCut(validList, 1000) //for exe 16g dri 32g -> 1000MB
+      //        println(s"本次处理文件数 = $filePers")
+      //        val c = validList.splitAt(filePers)
+      //        validList = c._2
+      //        println("*********************************************************")
+      //        println(s"**************正在进行第${index + 1} 次处理*********************")
+      //        println(s"**************目前处理情况: ${(index + 1) * filePers}/$fileAmount *********************")
+      //        println(s"**************还需要时间: ${fileAmount / (fileAmount - (index + 1) * filePers)}/ *********************")
+      //        println("*********************************************************")
+      //        if (filePers > 0)
+      //          SparkUtils.processParseBySpark(c._1, sc, RDFFormat.N3, args(1), index)
+      //        println("*********************************************************")
+      //        println(s"**************已经完成第${index + 1} 次处理*********************")
+      //        println(s"**************目前剩余处理情况: ${validList.size}/$fileAmount *********************")
+      //        println("*********************************************************")
+      //        index += 1
+      //      }
 
 
       val script = Neo4jUtils.buildImportScript(Neo4jUtils.ls(new File(args(1)), new mutable.HashSet[String]()).filter(_.contains("_ent_")).toList,
