@@ -6,10 +6,12 @@ import datastructure.Util.NodeUtils.buildCSVPerNodeMayEmpty
 import datastructure.{Node, NodeTreeHandler}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import org.eclipse.rdf4j.model.{BNode, Statement}
 import org.eclipse.rdf4j.rio.{RDFFormat, RDFParseException, Rio}
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 object SparkUtils {
 
   def process(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String, index: Int): Unit = {
@@ -120,61 +122,105 @@ object SparkUtils {
                        (triples: List[Statement]): RDD[Iterable[Statement]] = {
     groupFun(triples).filter(filter)
   }
+  def splitSample[T :ClassTag](rdd: RDD[T], n: Int, seed: Long = 42): Seq[RDD[T]] = {
+    Vector.tabulate(n) { j =>
+      rdd.mapPartitions { data =>
+        scala.util.Random.setSeed(seed)
+        data.filter { unused => scala.util.Random.nextInt(n) == j }
+      }
+    }
+  }
+
+  def splitSampleMux[T :ClassTag](rdd: RDD[T], n: Int,
+                                  persist: StorageLevel = StorageLevel.MEMORY_ONLY,
+                                  seed: Long = 42): Seq[RDD[T]] = {
+    if (n == 1) Seq(rdd)
+    else {
+    flatMuxPartitions(n, (id: Int, data: Iterator[T]) => {
+      scala.util.Random.setSeed(id.toLong * seed)
+      val samples = Vector.fill(n) { scala.collection.mutable.ArrayBuffer.empty[T] }
+      data.foreach { e => samples(scala.util.Random.nextInt(n)) += e }
+      samples
+    }, persist, rdd)}}
+
+  def muxPartitions[U :ClassTag, T](n: Int, f: (Int, Iterator[T]) => Seq[U],
+                                 persist: StorageLevel, rdd:RDD[T]): Seq[RDD[U]] = {
+    val mux = rdd.mapPartitionsWithIndex { case (id, itr) =>
+      Iterator.single(f(id, itr))
+    }.persist(persist)
+    Vector.tabulate(n) { j => mux.mapPartitions { itr => Iterator.single(itr.next()(j)) } }
+  }
+
+  def flatMuxPartitions[U :ClassTag, T](n: Int, f: (Int, Iterator[T]) => Seq[TraversableOnce[U]],
+                                     persist: StorageLevel, rdd: RDD[T]): Seq[RDD[U]] = {
+    val mux = rdd.mapPartitionsWithIndex { case (id, itr) =>
+      Iterator.single(f(id, itr))
+    }.persist(persist)
+    Vector.tabulate(n) { j => mux.mapPartitions { itr => itr.next()(j).toIterator } }
+  }
 
   def processParseBySpark(path: List[String], sc: SparkContext, format: RDFFormat, outpath: String, index: Int): Unit = {
     var corruptFilePath = new mutable.ArrayBuffer[String]
     var emptyRdd = sc.emptyRDD[Statement]
+    var size : Long = 0l
     for (p <- path) {
       println(s"now we are parsing $p")
+      size += Neo4jUtils.getFileSize(p)
       emptyRdd = emptyRdd union parseN3(p, sc, corruptFilePath)
     }
+    var partitionNum = size / (1024 * 1024 * 1024)
+    if (partitionNum < 1)  partitionNum += 1
     //handle all node as nnode
     val nodeRDD: RDD[Node] = groupBuildTriples(groupByIdRDD(sc): RDD[Statement] => RDD[Iterable[Statement]])(_ => true)(emptyRdd)
-      .map(i => NodeUtils.buildNodeByStatement(i))
+      .map(i => NodeUtils.buildNodeByStatement(i)).filter(_.hasLabel)//  remove the none label
+    val split : Seq[RDD[Node]] = splitSampleMux(nodeRDD, partitionNum.toInt)
+    var index_ : Int = 0
+    for (nodeRDD_ <- split) {
+      val labeledFinalNodeArray = nodeRDD_
+        .map(n => (n.getLabel, n))
+        .groupByKey()
+        .collect()
 
-    val labeledFinalNodeArray = nodeRDD
-      .map(n => (n.getLabel, n))
-      .groupByKey()
-      .collect()
+      for (nodelist <- labeledFinalNodeArray) {
 
-    for (nodelist <- labeledFinalNodeArray) {
+        val label = sc.broadcast[String](nodelist._1)
 
-      val label = sc.broadcast[String](nodelist._1)
+        val labeledNodes: Iterable[Node] = nodelist._2
 
-      val labeledNodes: Iterable[Node] = nodelist._2
+        val labeledNode = sc.parallelize(labeledNodes.toList)
 
-      val labeledNode = sc.parallelize(labeledNodes.toList)
+        val schemaMap = sc.broadcast[mutable.Map[String, Boolean]](SparkUtils.generateSchema(labeledNode))
 
-      val schemaMap = sc.broadcast[mutable.Map[String, Boolean]](SparkUtils.generateSchema(labeledNode))
+        println(schemaMap.value.keySet)
 
-      println(schemaMap.value.keySet)
+        val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
 
-      val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
+        val csvHead = NodeUtils.stringSchema(schemaMap.value)
 
-      val csvHead = NodeUtils.stringSchema(schemaMap.value)
+        println("now - " + label.value)
 
-      println("now - " + label.value)
+        println("schema is - " + csvHead)
 
-      println("schema is - " + csvHead)
+        NodeUtils
+          .writeFile(csvHead +: csvStr,
+            append = false,
+            outpath + s"$index/",
+            label.value + s"${index_}_ent_.csv")
 
-      NodeUtils
-        .writeFile(csvHead +: csvStr,
-          append = false,
-          outpath + s"$index/",
-          label.value + "_ent_.csv")
+        val relationHead = ":START_ID,:END_ID,:TYPE"
 
-      val relationHead = ":START_ID,:END_ID,:TYPE"
+        val relationship = SparkUtils.buildNodeRelationCSV(labeledNode).collect()
 
-      val relationship = SparkUtils.buildNodeRelationCSV(labeledNode).collect()
+        NodeUtils
+          .writeFile(relationHead +: relationship,
+            append = false,
+            outpath + s"$index/",
+            label.value + s"${index_}_rel_.csv")
 
-      NodeUtils
-        .writeFile(relationHead +: relationship,
-          append = false,
-          outpath + s"$index/",
-          label.value + "_rel_.csv")
-
-      NodeUtils.writeFile(corruptFilePath.toArray, append = true,
-        outpath + "corruptFile/", "log.txt")
+        NodeUtils.writeFile(corruptFilePath.toArray, append = true,
+          outpath + "corruptFile/", "log.txt")
+        index_ += 1
+      }
     }
   }
 

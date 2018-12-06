@@ -77,7 +77,7 @@ class Node(private val id: String) extends Serializable {
 //
 //  private def getBNodePredicate(B : B) : String = bNodePredicate(B)
 
-  private def hasLabel : Boolean = label != null
+  def hasLabel : Boolean = label != null
 
   private def addLabel(label : U) : Unit = {
     if (!hasLabel) {
