@@ -73,7 +73,7 @@ class FileSeparateIterator(file: List[File], split: Int) extends Iterator[Array[
     currentFile = filelist.head
     filelist = filelist.tail
     reader = new BufferedReader(new FileReader(currentFile))
-    fileSize = file.head.length()
+    fileSize = currentFile.length()
     lineNums = FileSeparateIterator.getTotalLines(currentFile)
     curr = 0
     println(s"iterator has switch to new file $currentFile")

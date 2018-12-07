@@ -165,7 +165,7 @@ object SparkUtils {
     var index = 0
     val files = path
       .map(new File(_))
-    var iter = new FileSeparateIterator(files, 512 * 1024 * 1024) //512MB each time
+    val iter = new FileSeparateIterator(files, 1024 * 1024 * 1024) //512MB each time
     var count = 0
     val rdfParser = Rio.createParser(format)
     for (p <- iter) {
@@ -174,7 +174,7 @@ object SparkUtils {
       rdfParser.setRDFHandler(handler)
       println(s"now we are parsing $count")
       import scala.collection.JavaConversions._
-      rdfParser.parse(new ArrayStringReader(p.iterator), "")
+      rdfParser.parse(new ArrayStringReader(p.map(parseCleanQuota(_, "\'")).iterator), "")
       println("done parsing")
       index += 1
       count += 1
