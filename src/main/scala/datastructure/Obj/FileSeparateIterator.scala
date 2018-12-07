@@ -1,6 +1,7 @@
 package datastructure.Obj
 
 import java.io._
+import java.util.Random
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -105,13 +106,27 @@ object FileSeparateIterator {
   def main(args: Array[String]): Unit = {
     val f = new File("C:\\Users\\coco1\\IdeaProjects\\SeqN3CSVProcessor\\src\\main\\scala\\hosts")
     val h2 = new File("C:\\Users\\coco1\\IdeaProjects\\SeqN3CSVProcessor\\src\\main\\scala\\h2")
-    val reader = new FileSeparateIterator(List(f, h2, f, f, h2, f, f, h2, f), 0)
+    val reader = new FileSeparateIterator(List(f, h2), 0)
     reader.init()
     var count = 0
+    var ran = new Random
     while (reader.hasNext) {
       val r = reader.next()
-      count += r.length
-      println(s"***************$count******************")
+      import scala.collection.JavaConversions._
+      val arrayReader = new PushbackReader(new ArrayStringReader(r.iterator))
+      var flag = true
+      while (flag) {
+        var e = arrayReader.read()
+        if (e == -1)
+          flag = false
+        if (ran.nextBoolean() && flag) {
+          arrayReader.unread(e)
+          e = arrayReader.read()
+        }
+        print(e.toChar)
+      }
+      println()
+      println("*********************************")
     }
   }
 }

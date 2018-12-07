@@ -81,7 +81,7 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   }
 
   override def startRDF(): Unit = {
-    println("start parser")
+    //    println("start parser")
   }
 
   override def endRDF(): Unit = {

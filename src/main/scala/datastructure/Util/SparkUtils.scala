@@ -2,7 +2,7 @@ package datastructure.Util
 import java.io.{File, FileReader}
 import java.util.regex.Pattern
 
-import datastructure.Obj.FileSeparateIterator
+import datastructure.Obj.{ArrayStringReader, FileSeparateIterator}
 import datastructure.Util.NodeUtils.buildCSVPerNodeMayEmpty
 import datastructure.{Node, NodeTreeHandler}
 import org.apache.spark.SparkContext
@@ -165,13 +165,20 @@ object SparkUtils {
     var index = 0
     val files = path
       .map(new File(_))
-    var iter = new FileSeparateIterator(files, 1024 * 1024 * 1024)
+    var iter = new FileSeparateIterator(files, 512 * 1024 * 1024) //512MB each time
     var count = 0
+    val rdfParser = Rio.createParser(format)
     for (p <- iter) {
-      index += 1
+      val handler = new NodeTreeHandler
+      println("done init")
+      rdfParser.setRDFHandler(handler)
       println(s"now we are parsing $count")
+      import scala.collection.JavaConversions._
+      rdfParser.parse(new ArrayStringReader(p.iterator), "")
+      println("done parsing")
+      index += 1
       count += 1
-      val n3RDD = parseN3(p, sc, corruptFilePath)
+      val n3RDD = sc.parallelize(handler.fileStatementQueue)
       //handle all node as nnode
       val nodeRDD: RDD[Node] = groupBuildTriples(groupByIdRDD(sc): RDD[Statement] => RDD[Iterable[Statement]])(_ => true)(n3RDD)
         .map(i => NodeUtils.buildNodeByStatement(i))
