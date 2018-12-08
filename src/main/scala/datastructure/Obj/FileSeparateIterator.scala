@@ -106,7 +106,7 @@ object FileSeparateIterator {
   def main(args: Array[String]): Unit = {
     val f = new File("C:\\Users\\coco1\\IdeaProjects\\SeqN3CSVProcessor\\src\\main\\scala\\hosts")
     val h2 = new File("C:\\Users\\coco1\\IdeaProjects\\SeqN3CSVProcessor\\src\\main\\scala\\h2")
-    val reader = new FileSeparateIterator(List(f, h2), 0)
+    val reader = new FileSeparateIterator(List(f, h2), 6000)
     reader.init()
     var count = 0
     var ran = new Random

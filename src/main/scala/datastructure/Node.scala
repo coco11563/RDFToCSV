@@ -1,5 +1,7 @@
 package datastructure
 
+import java.util.regex.{Matcher, Pattern}
+
 import datastructure.Obj.TypeMap.{L, U, V}
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.vocabulary.RDF
@@ -18,7 +20,7 @@ class Node(private val id: String) extends Serializable {
   private var label: String = _
 
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
-
+  private val idLabelRegex: Pattern = Pattern.compile("(?<prefix>http:\\/\\/[^>]+\\/(?<label>[^\\/]+)\\/)")
   private val secondLabels : mutable.HashSet[String] = new mutable.HashSet[String]()
 //  @Deprecated
 //  private val bNodePredicate = new mutable.HashMap[B, String]()
@@ -28,7 +30,6 @@ class Node(private val id: String) extends Serializable {
   private val nodeRelation = new mutable.HashSet[(String, String, String)]()
 
   val propSet : mutable.HashMap[String, Boolean] = new mutable.HashMap[String, Boolean]()
-
   private def addProp(iri: String, lit : String) : Unit = {
     val literal = lit.replaceAll("\"", " ").replaceAll("\'", " ")
     if (properties.contains(iri)) {
@@ -114,13 +115,19 @@ class Node(private val id: String) extends Serializable {
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 
-  def getLabel: String = if (hasLabel) label else "NONE"
+  def getLabel: String = if (hasLabel) label else getLabelFromID
 
   def getAllLabel: String = {
     if (!hasLabel)
-      "NONE"
+      getLabelFromID
     else
       this.secondLabels.reduce(_ + ";" + _)
+  }
+
+  def getLabelFromID: String = {
+    val matcher: Matcher = idLabelRegex.matcher(id)
+    if (matcher.find()) matcher.group("label")
+    else "NONE"
   }
   def getPropSet : mutable.HashMap[String, Boolean] = this.propSet
   def getId : String = this.id

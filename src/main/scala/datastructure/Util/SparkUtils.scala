@@ -191,10 +191,9 @@ object SparkUtils {
         val label = sc.broadcast[String](nodelist._1)
         val labeledNodes: Iterable[Node] = nodelist._2
         val labeledNode = sc.parallelize(labeledNodes.toList)
-        val hasLabeledNode = labeledNode.filter(_.hasLabel)
         val schemaMap = sc.broadcast[mutable.Map[String, Boolean]](SparkUtils.generateSchema(labeledNode))
         println(schemaMap.value.keySet)
-        val csvStr = SparkUtils.buildCSV(hasLabeledNode, schemaMap.value).collect()
+        val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
         val csvHead = NodeUtils.stringSchema(schemaMap.value)
         println("now - " + label.value)
         println("schema is - " + csvHead)
