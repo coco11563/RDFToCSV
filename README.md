@@ -23,10 +23,10 @@ coco11563@yeah.net
 
 usage
 
-'''
+
 if we need to process the n3 file 
 the script to start spark process should be like
 spark-submit ______sparkconfig______ /n3filepath /outputpath
 the n3 file should be named like *.n3
 the out put file will be csv format, and split by every 1G n3 file content
-'''
+
