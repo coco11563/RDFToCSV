@@ -44,14 +44,14 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
   // Node map -> get   BNodeMap -> write and get
   def handleStatement(subject: Resource, predicate : IRI, obj : Value, statement: Statement) : Unit = (subject, predicate, obj) match {
     case (a:U, b:U, c:L) =>
-      if (NodeMap.contains(a)) NodeMap.get(a).handle(statement)
+      if (NodeMap.containsKey(a)) NodeMap.get(a).handle(statement)
       else NodeMap.put(a, Node.build(statement))
     case (a:U, b:U, c:U) =>
-      if (NodeMap.contains(a)) NodeMap.get(a).handle(statement)
+      if (NodeMap.containsKey(a)) NodeMap.get(a).handle(statement)
       else NodeMap.put(a, Node.build(statement))
     case (a:U, b:U, c:B) =>
       val node : Node =
-        if (NodeMap.contains(a)) {
+        if (NodeMap.containsKey(a)) {
           val n = NodeMap.get(a)
           n.handle(statement)
           n
@@ -61,19 +61,19 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
         NodeMap.put(a, n)
         n
       }
-      if (BNodeMap.contains(c)) BNodeMap.get(c).add(node)
+      if (BNodeMap.containsKey(c)) BNodeMap.get(c).add(node)
       else BNodeMap.put(c, mutable.Set(node))
     case (a:B, b:U, c:L) =>
-      if (BNodeMap.contains(a)) BNodeMap.get(a).foreach(n => n.handle(statement))
+      if (BNodeMap.containsKey(a)) BNodeMap.get(a).foreach(n => n.handle(statement))
       else unHandleBNodeTail.enqueue(statement)
     case (a:B, b:U, c:U) =>
-      if (BNodeMap.contains(a)) BNodeMap.get(a).foreach(n => n.handle(statement))
+      if (BNodeMap.containsKey(a)) BNodeMap.get(a).foreach(n => n.handle(statement))
       else unHandleBNodeTail.enqueue(statement)
     case (a:B, b:U, c:B) =>
-      if (BNodeMap.contains(a))
+      if (BNodeMap.containsKey(a))
         BNodeMap.get(a).foreach(n => {
           n.handle(statement)
-          if(BNodeMap.contains(c)) BNodeMap.get(c).add(n)
+          if (BNodeMap.containsKey(c)) BNodeMap.get(c).add(n)
           else BNodeMap.put(c,mutable.Set(n))
         })
       else unHandleBNodeTail.enqueue(statement)
@@ -136,15 +136,19 @@ class NodeTreeHandler extends RDFHandler with Callable[Int]{
           val predicate = statement.getPredicate
           (subject, obj, predicate) match {
             case (a:B, b:U, c:L) =>
-              if (BNodeMap.contains(a)) {BNodeMap.get(a).foreach(n => n.handle(statement)) ; count += 1; perCount += 1}
+              if (BNodeMap.containsKey(a)) {
+                BNodeMap.get(a).foreach(n => n.handle(statement)); count += 1; perCount += 1
+              }
               else unHandleBNodeTail.enqueue(statement)
             case (a:B, b:U, c:U) =>
-              if (BNodeMap.contains(a)) {BNodeMap.get(a).foreach(n => n.handle(statement)) ; count += 1; perCount += 1}
+              if (BNodeMap.containsKey(a)) {
+                BNodeMap.get(a).foreach(n => n.handle(statement)); count += 1; perCount += 1
+              }
               else unHandleBNodeTail.enqueue(statement)
             case (a:B, b:U, c:B) =>
-              if (BNodeMap.contains(a)) BNodeMap.get(a).foreach(n => {
+              if (BNodeMap.containsKey(a)) BNodeMap.get(a).foreach(n => {
                 n.handle(statement)
-                if(BNodeMap.contains(c)) BNodeMap.get(c).add(n)
+                if (BNodeMap.containsKey(c)) BNodeMap.get(c).add(n)
                 else BNodeMap.put(c,mutable.Set(n))
                 count += 1; perCount += 1
               })

@@ -38,7 +38,7 @@ class FileSeparateIterator(file: List[File], split: Int) extends Iterator[Array[
     var currentArrayBuffer = new ArrayBuffer[String]()
     if (!inited) init()
     var lst: String = ""
-    while (hasNext && curRead < eachTimeRead) {
+    while (hasNext && curRead < eachTimeRead) { //判断是否读完的条件是cur < eachtimeread，在文件每行长度差不多时效果不错，在文件行大小分布不均时会出现OOM或者单文件小，这里作者在考虑是否需要更为细粒度的分行，在观察到N3文件大多数行大小差不多时选择了妥协，毕竟KISS
       if (!thisFileHasNext) nextFile()
       if (buffer) {
         buffer = false

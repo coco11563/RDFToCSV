@@ -62,7 +62,7 @@ object Main {
 
       val script = Neo4jUtils.buildImportScript(Neo4jUtils.ls(new File(args(1)), new mutable.HashSet[String]()).filter(_.contains("_ent_")).toList,
         Neo4jUtils.ls(new File(args(1)), new mutable.HashSet[String]()).filter(_.contains("_rel_")).toList,
-        "graph.db", "/data/neo4j/db/databases")
+        "graph.db", "/data/neo4j/db/databases/")
 
       println(script)
 

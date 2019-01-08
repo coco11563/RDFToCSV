@@ -17,8 +17,8 @@ class Node(private val id: String) extends Serializable {
     */
   private def this(id: V) = this(id.stringValue())
 
+  private var initLabel: Boolean = false
   private var label: String = _
-
   private val properties = new mutable.HashMap[String, mutable.HashSet[String]]() // Name -> Value
   private val idLabelRegex: Pattern = Pattern.compile("(?<prefix>http:\\/\\/[^>]+\\/(?<label>[^\\/]+)\\/)")
   private val secondLabels : mutable.HashSet[String] = new mutable.HashSet[String]()
@@ -46,7 +46,7 @@ class Node(private val id: String) extends Serializable {
   }
 
   override def toString: String = {
-    s"$id : $label , $properties"
+    s"$id : $getAllLabel , $properties"
   }
 
 //  /**
@@ -66,6 +66,12 @@ class Node(private val id: String) extends Serializable {
 
   private def addNodeRelation (predicate : String, id : Value) : Boolean = nodeRelation.add((predicate, this.id, id.stringValue()))
 
+  def getAllLabel: String = {
+    if (!hasLabel)
+      getLabel
+    else
+      this.secondLabels.reduce(_ + ";" + _)
+  }
   def getNodeRelation: List[String] = nodeRelation.map(a => a._2 + "," + a._3 + "," + a._1).toList
 //  /**
 //    * bNode adding method for insert bNode which have a bNode precedent(form of BUB)
@@ -115,14 +121,19 @@ class Node(private val id: String) extends Serializable {
       throw new IllegalArgumentException(s"the input statement with ($subject, $predicate, $obj) is not any form of (UUU, UUL, UUB), please check the handle program")
   }
 
-  def getLabel: String = if (hasLabel) label else getLabelFromID
-
-  def getAllLabel: String = {
-    if (!hasLabel)
-      getLabelFromID
-    else
-      this.secondLabels.reduce(_ + ";" + _)
+  def getLabel: String = {
+    if (hasLabel)
+      label
+    else {
+      val s = getLabelFromID
+      this.label = s
+      this.initLabel = true
+      this.secondLabels += s
+      s
+    }
   }
+
+  def isInitLabel: Boolean = this.initLabel
 
   def getLabelFromID: String = {
     val matcher: Matcher = idLabelRegex.matcher(id)

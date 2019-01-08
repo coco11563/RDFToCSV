@@ -165,7 +165,7 @@ object SparkUtils {
     var index = 0
     val files = path
       .map(new File(_))
-    val iter = new FileSeparateIterator(files, 1024 * 1024 * 1024) //512MB each time
+    val iter = new FileSeparateIterator(files, 1024 * 1024 * 1024) //1024MB each time
     var count = 0
     val rdfParser = Rio.createParser(format)
     for (p <- iter) {
@@ -174,7 +174,7 @@ object SparkUtils {
       rdfParser.setRDFHandler(handler)
       println(s"now we are parsing $count")
       import scala.collection.JavaConversions._
-      rdfParser.parse(new ArrayStringReader(p.map(parseCleanQuota(_, "\'")).iterator), "")
+      rdfParser.parse(new ArrayStringReader(p.map(parseCleanQuota(_, "\'")).map(NodeUtils.nodeIdRepair).iterator), "")
       println("done parsing")
       index += 1
       count += 1
@@ -193,15 +193,17 @@ object SparkUtils {
         val labeledNode = sc.parallelize(labeledNodes.toList)
         val schemaMap = sc.broadcast[mutable.Map[String, Boolean]](SparkUtils.generateSchema(labeledNode))
         println(schemaMap.value.keySet)
-        val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
-        val csvHead = NodeUtils.stringSchema(schemaMap.value)
-        println("now - " + label.value)
-        println("schema is - " + csvHead)
-        NodeUtils
-          .writeFile(csvHead +: csvStr,
-            append = false,
-            outpath + s"$index/",
-            label.value + s"${index_}_ent_.csv")
+        if (!labeledNode.first().isInitLabel) { //only mk the csv from truly one
+          val csvStr = SparkUtils.buildCSV(labeledNode, schemaMap.value).collect()
+          val csvHead = NodeUtils.stringSchema(schemaMap.value)
+          println("now - " + label.value)
+          println("schema is - " + csvHead)
+          NodeUtils
+            .writeFile(csvHead +: csvStr,
+              append = false,
+              outpath + s"$index/",
+              label.value + s"${index_}_ent_.csv")
+        }
         val relationHead = ":START_ID,:END_ID,:TYPE"
         val relationship = SparkUtils.buildNodeRelationCSV(labeledNode).collect()
         NodeUtils
@@ -284,11 +286,12 @@ object SparkUtils {
   }
   def parseCleanQuota(str: String, replacement: CharSequence): String = {
     val mat = Pattern.compile("\"(.*)\"").matcher(str)
-    val rep = if (mat.find()) mat.group(1) else ""
-    if (rep.contains("\"")) {
-      val ret1 = rep.replace("\"", replacement)
-      val ret = str.replaceAll("\".*\" .", "")
-      ret + "\"" + ret1 + "\"" + " ."
-    } else str
+    if (mat.find()) {
+      val rep = mat.group(1)
+      val ret = rep.replaceAll("\"", replacement.toString)
+      val s = str.split("[ ]+")
+      s(0) + " " + s(1) + " " + "\"" + ret + "\"" + " ."
+    }
+    else str
   }
 }
